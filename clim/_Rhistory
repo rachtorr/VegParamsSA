@@ -1,0 +1,512 @@
+chap$evap_soil$LH=LH_output$evap_soil
+chap$evap_soil$ML=ML_output$evap_soil
+chap$evap_soil$MM=MM_output$evap_soil
+chap$evap_soil$MH=MH_output$evap_soil
+chap$evap_soil$HL=HL_output$evap_soil
+chap$evap_soil$HM=HM_output$evap_soil
+chap$evap_soil$HH=HH_output$evap_soil
+chap$acc_trans=list()
+chap$acc_trans$LL=LL_output$acc_trans
+chap$acc_trans$LM=LM_output$acc_trans
+chap$acc_trans$LH=LH_output$acc_trans
+chap$acc_trans$ML=ML_output$acc_trans
+chap$acc_trans$MM=MM_output$acc_trans
+chap$acc_trans$MH=MH_output$acc_trans
+chap$acc_trans$HL=HL_output$acc_trans
+chap$acc_trans$HM=HM_output$acc_trans
+chap$acc_trans$HH=HH_output$acc_trans
+chap$trans=list()
+chap$trans$LL=LL_output$trans
+chap$trans$LM=LM_output$trans
+chap$trans$LH=LH_output$trans
+chap$trans$ML=ML_output$trans
+chap$trans$MM=MM_output$trans
+chap$trans$MH=MH_output$trans
+chap$trans$HL=HL_output$trans
+chap$trans$HM=HM_output$trans
+chap$trans$HH=HH_output$trans
+chap$plant_resp=list()
+chap$plant_resp$LL=LL_output_grow$plant_resp
+chap$plant_resp$LM=LM_output_grow$plant_resp
+chap$plant_resp$LH=LH_output_grow$plant_resp
+chap$plant_resp$ML=ML_output_grow$plant_resp
+chap$plant_resp$MM=MM_output_grow$plant_resp
+chap$plant_resp$MH=MH_output_grow$plant_resp
+chap$plant_resp$HL=HL_output_grow$plant_resp
+chap$plant_resp$HM=HM_output_grow$plant_resp
+chap$plant_resp$HH=HH_output_grow$plant_resp
+chap$soil_resp=list()
+chap$soil_resp$LL=LL_output_grow$soil_resp
+chap$soil_resp$LM=LM_output_grow$soil_resp
+chap$soil_resp$LH=LH_output_grow$soil_resp
+chap$soil_resp$ML=ML_output_grow$soil_resp
+chap$soil_resp$MM=MM_output_grow$soil_resp
+chap$soil_resp$MH=MH_output_grow$soil_resp
+chap$soil_resp$HL=HL_output_grow$soil_resp
+chap$soil_resp$HM=HM_output_grow$soil_resp
+chap$soil_resp$HH=HH_output_grow$soil_resp
+chap$litterc=list()
+chap$litterc$LL=LL_output_grow$litrc
+chap$litterc$LM=LM_output_grow$litrc
+chap$litterc$LH=LH_output_grow$litrc
+chap$litterc$ML=ML_output_grow$litrc
+chap$litterc$MM=MM_output_grow$litrc
+chap$litterc$MH=MH_output_grow$litrc
+chap$litterc$HL=HL_output_grow$litrc
+chap$litterc$HM=HM_output_grow$litrc
+chap$litterc$HH=HH_output_grow$litrc
+chap$littern=list()
+chap$littern$LL=LL_output_grow$litrn
+chap$littern$LM=LM_output_grow$litrn
+chap$littern$LH=LH_output_grow$litrn
+chap$littern$ML=ML_output_grow$litrn
+chap$littern$MM=MM_output_grow$litrn
+chap$littern$MH=MH_output_grow$litrn
+chap$littern$HL=HL_output_grow$litrn
+chap$littern$HM=HM_output_grow$litrn
+chap$littern$HH=HH_output_grow$litrn
+chap$streamNO3_Concen=list()
+chap$streamNO3_Concen$LL=LL_output_grow$streamflow_NO3/LL_output$streamflow* 62/14*1000
+chap$streamNO3_Concen$LM=LM_output_grow$streamflow_NO3/LM_output$streamflow* 62/14*1000
+chap$streamNO3_Concen$LH=LH_output_grow$streamflow_NO3/LH_output$streamflow* 62/14*1000
+chap$streamNO3_Concen$ML=ML_output_grow$streamflow_NO3/ML_output$streamflow* 62/14*1000
+chap$streamNO3_Concen$MM=MM_output_grow$streamflow_NO3/MM_output$streamflow* 62/14*1000
+chap$streamNO3_Concen$MH=MH_output_grow$streamflow_NO3/MH_output$streamflow* 62/14*1000
+chap$streamNO3_Concen$HL=HL_output_grow$streamflow_NO3/HL_output$streamflow* 62/14*1000
+chap$streamNO3_Concen$HM=HM_output_grow$streamflow_NO3/HM_output$streamflow* 62/14*1000
+chap$streamNO3_Concen$HH=HH_output_grow$streamflow_NO3/HH_output$streamflow* 62/14*1000
+output_list=chap
+return(output_list)
+}
+summary_DC_slope=function(chap,targetperiod){
+LL_Conc=chap$stream_NO3$LL[targetperiod] / chap$streamflow$LL[targetperiod] * 62/14*1000
+LL_stream = chap$streamflow$LL[targetperiod]
+LM_Conc=chap$stream_NO3$LM[targetperiod] / chap$streamflow$LM[targetperiod] * 62/14*1000
+LM_stream = chap$streamflow$LM[targetperiod]
+LH_Conc=chap$stream_NO3$LH[targetperiod] / chap$streamflow$LH[targetperiod] * 62/14*1000
+LH_stream = chap$streamflow$LH[targetperiod]
+ML_Conc=chap$stream_NO3$ML[targetperiod] / chap$streamflow$ML[targetperiod] * 62/14*1000
+ML_stream = chap$streamflow$ML[targetperiod]
+MM_Conc=chap$stream_NO3$MM[targetperiod] / chap$streamflow$MM[targetperiod] * 62/14*1000
+MM_stream = chap$streamflow$MM[targetperiod]
+MH_Conc=chap$stream_NO3$MH[targetperiod] / chap$streamflow$MH[targetperiod] * 62/14*1000
+MH_stream = chap$streamflow$MH[targetperiod]
+HL_Conc=chap$stream_NO3$HL[targetperiod] / chap$streamflow$HL[targetperiod] * 62/14*1000
+HL_stream = chap$streamflow$HL[targetperiod]
+HM_Conc=chap$stream_NO3$HM[targetperiod] / chap$streamflow$HM[targetperiod] * 62/14*1000
+HM_stream = chap$streamflow$HM[targetperiod]
+HH_Conc=chap$stream_NO3$HH[targetperiod] / chap$streamflow$HH[targetperiod] * 62/14*1000
+HH_stream = chap$streamflow$HH[targetperiod]
+LL_slope=calcul_DC_slope(LL_Conc,LL_stream)
+LM_slope=calcul_DC_slope(LM_Conc,LM_stream)
+LH_slope=calcul_DC_slope(LH_Conc,LH_stream)
+ML_slope=calcul_DC_slope(ML_Conc,ML_stream)
+MM_slope=calcul_DC_slope(MM_Conc,MM_stream)
+MH_slope=calcul_DC_slope(MH_Conc,MH_stream)
+HL_slope=calcul_DC_slope(HL_Conc,HL_stream)
+HM_slope=calcul_DC_slope(HM_Conc,HM_stream)
+HH_slope=calcul_DC_slope(HH_Conc,HH_stream)
+slope = c(LL_slope,LM_slope,LH_slope,ML_slope,MM_slope,MH_slope,HL_slope,HM_slope,HH_slope)
+return(slope)
+}
+Concen_veg=function(chap,mod){
+LL_Conc=chap$stream_NO3$LL[targetperiod] / chap$streamflow$LL[targetperiod] * 62/14*1000
+LM_Conc=chap$stream_NO3$LM[targetperiod] / chap$streamflow$LM[targetperiod] * 62/14*1000
+LH_Conc=chap$stream_NO3$LH[targetperiod] / chap$streamflow$LH[targetperiod] * 62/14*1000
+ML_Conc=chap$stream_NO3$ML[targetperiod] / chap$streamflow$ML[targetperiod] * 62/14*1000
+MM_Conc=chap$stream_NO3$MM[targetperiod] / chap$streamflow$MM[targetperiod] * 62/14*1000
+MH_Conc=chap$stream_NO3$MH[targetperiod] / chap$streamflow$MH[targetperiod] * 62/14*1000
+HL_Conc=chap$stream_NO3$HL[targetperiod] / chap$streamflow$HL[targetperiod] * 62/14*1000
+HM_Conc=chap$stream_NO3$HM[targetperiod] / chap$streamflow$HM[targetperiod] * 62/14*1000
+HH_Conc=chap$stream_NO3$HH[targetperiod] / chap$streamflow$HH[targetperiod] * 62/14*1000
+if(mod==0){
+Concen=c(mean(LL_Conc),mean(LM_Conc),mean(LH_Conc),mean(ML_Conc),
+mean(MM_Conc),mean(MH_Conc),mean(HL_Conc),mean(HM_Conc),mean(HH_Conc))
+}else if(mod==15){
+Concen=c(LL_Conc,LM_Conc,LH_Conc,ML_Conc,
+MM_Conc,MH_Conc,HL_Conc,HM_Conc,HH_Conc)
+}else if(mod==4){
+Concen=c(max(LL_Conc),max(LM_Conc),max(LH_Conc),max(ML_Conc),
+max(MM_Conc),max(MH_Conc),max(HL_Conc),max(HM_Conc),
+max(HH_Conc))
+}
+return(Concen)
+}
+Concen_veg_boxplot=function(chap,grass,oak,mod){
+chap_Concen=Concen_veg(chap,mod)
+grass_Concen=Concen_veg(grass,mod)
+oak_Concen=Concen_veg(oak,mod)
+Concen = c(chap_Concen,grass_Concen,oak_Concen)
+data_label=c('Chap','Chap','Chap','Chap','Chap','Chap','Chap','Chap','Chap',
+'Grass','Grass','Grass','Grass','Grass','Grass','Grass','Grass','Grass',
+'Oak','Oak','Oak','Oak','Oak','Oak','Oak','Oak','Oak'
+)
+df = data.frame(Concen,data_label)
+boxplot(Concen~data_label, data=df,main='Stream NO3 Concentration',
+xlab="Vegetation Types",ylab='Stream NO3 Concentration, in mg/L')
+}
+calcul_DC_slope=function(LL_Conc,LL_stream){
+days=which(LL_stream>quantile(LL_stream,0.5))
+fit=lm(LL_Conc[days]~LL_stream[days])
+coeff=coefficients(fit)
+LL_slope=coeff[2]
+return(LL_slope)
+}
+plot_DC_slope=function(chap_slope,grass_slope,oak_slope,name){
+slope = c(chap_slope,grass_slope,oak_slope)
+data_label=c('Chap','Chap','Chap','Chap','Chap','Chap','Chap','Chap','Chap',
+'Grass','Grass','Grass','Grass','Grass','Grass','Grass','Grass','Grass',
+'Oak','Oak','Oak','Oak','Oak','Oak','Oak','Oak','Oak'
+)
+df = data.frame(slope,data_label)
+boxplot(slope~data_label, data=df,main=name,
+xlab="Vegetation Types",ylab='Slope', ylim=c(-0.17,0.01))
+}
+NO3_Concen_mean=function(chap,targetperiod){
+Mean=c()
+Mean[1]=mean(chap$streamNO3_Concen$LL[targetperiod])
+Mean[2]=mean(chap$streamNO3_Concen$LM[targetperiod])
+Mean[3]=mean(chap$streamNO3_Concen$LH[targetperiod])
+Mean[4]=mean(chap$streamNO3_Concen$ML[targetperiod])
+Mean[5]=mean(chap$streamNO3_Concen$MM[targetperiod])
+Mean[6]=mean(chap$streamNO3_Concen$MH[targetperiod])
+Mean[7]=mean(chap$streamNO3_Concen$HL[targetperiod])
+Mean[8]=mean(chap$streamNO3_Concen$HM[targetperiod])
+Mean[9]=mean(chap$streamNO3_Concen$HH[targetperiod])
+return(Mean)
+}
+DC_dataset=function(chap,grass,oak,chap_N10,grass_N10,oak_N10){
+TIA=c()
+EIA=c()
+N_dis=c()
+Veg=c()
+Slope=c()
+Mean_NO3_Con=c()
+# Slope
+chap_E_slope=summary_DC_slope(chap,targetperiod)
+grass_E_slope=summary_DC_slope(grass,targetperiod)
+oak_E_slope=summary_DC_slope(oak,targetperiod)
+chap_U_slope=summary_DC_slope(chap_N10,targetperiod)
+grass_U_slope=summary_DC_slope(grass_N10,targetperiod)
+oak_U_slope=summary_DC_slope(oak_N10,targetperiod)
+NO3_Concen_chap=NO3_Concen_mean(chap,targetperiod)
+NO3_Concen_grass=NO3_Concen_mean(grass,targetperiod)
+NO3_Concen_oak=NO3_Concen_mean(oak,targetperiod)
+NO3_Concen_chap_10=NO3_Concen_mean(chap_N10,targetperiod)
+NO3_Concen_grass_10=NO3_Concen_mean(grass_N10,targetperiod)
+NO3_Concen_oak_10=NO3_Concen_mean(oak_N10,targetperiod)
+for(i in 1:54){
+#TIA
+if ((i-1)%/%18==0){
+TIA[i]='L'
+}
+else if((i-1)%/%18==1){
+TIA[i]='M'
+}
+else if((i-1)%/%18==2){
+TIA[i]='H'
+}
+#EIA
+if (((i-1)%/%6)%%3==0){
+EIA[i]='L'
+}
+else if(((i-1)%/%6)%%3==1){
+EIA[i]='M'
+}
+else if(((i-1)%/%6)%%3==2){
+EIA[i]='H'
+}
+#N_dis
+if (((i-1)%/%3)%%2==0){
+N_dis[i]="Ev"
+}
+else if(((i-1)%/%3)%%2==1){
+N_dis[i]="Un"
+}
+# Veg
+if((i-1)%%3==0){
+Veg[i]="Chap"
+}
+else if((i-1)%%3==1){
+Veg[i]="Grass"
+}
+else if((i-1)%%3==2){
+Veg[i]="Oak"
+}
+# Slope
+if(((i-1)%%6)==0){
+Slope[i]=chap_E_slope[(i-1)%/%6+1]
+}
+else if(((i-1)%%6)==1){
+Slope[i]=grass_E_slope[(i-1)%/%6+1]
+}
+else if(((i-1)%%6)==2){
+Slope[i]=oak_E_slope[(i-1)%/%6+1]
+}
+else if(((i-1)%%6)==3){
+Slope[i]=chap_U_slope[(i-1)%/%6+1]
+}
+else if(((i-1)%%6)==4){
+Slope[i]=grass_U_slope[(i-1)%/%6+1]
+}
+else if(((i-1)%%6)==5){
+Slope[i]=oak_U_slope[(i-1)%/%6+1]
+}
+# Mean_Concen
+if(((i-1)%%6)==0){
+Mean_NO3_Con[i]=NO3_Concen_chap[(i-1)%/%6+1]
+}
+else if(((i-1)%%6)==1){
+Mean_NO3_Con[i]=NO3_Concen_grass[(i-1)%/%6+1]
+}
+else if(((i-1)%%6)==2){
+Mean_NO3_Con[i]=NO3_Concen_oak[(i-1)%/%6+1]
+}
+else if(((i-1)%%6)==3){
+Mean_NO3_Con[i]=NO3_Concen_chap_10[(i-1)%/%6+1]
+}
+else if(((i-1)%%6)==4){
+Mean_NO3_Con[i]=NO3_Concen_grass_10[(i-1)%/%6+1]
+}
+else if(((i-1)%%6)==5){
+Mean_NO3_Con[i]=NO3_Concen_oak_10[(i-1)%/%6+1]
+}
+}
+df=data.frame("TIA"=TIA,"EIA"=EIA,"N_dis"=N_dis,"Veg"=Veg,
+"Slope"=Slope,"Mean_NO3_Con"=Mean_NO3_Con)
+return(df)
+}
+plot_DC=function(chap,targetperiod=seq(1,length(chap$nitrate$LL),1)){
+LL_Conc=chap$stream_NO3$LL / chap$streamflow$LL * 62/14*1000
+LL_stream = chap$streamflow$LL
+LM_Conc=chap$stream_NO3$LM / chap$streamflow$LM * 62/14*1000
+LM_stream = chap$streamflow$LM
+LH_Conc=chap$stream_NO3$LH / chap$streamflow$LH * 62/14*1000
+LH_stream = chap$streamflow$LH
+ML_Conc=chap$stream_NO3$ML / chap$streamflow$ML * 62/14*1000
+ML_stream = chap$streamflow$ML
+MM_Conc=chap$stream_NO3$MM / chap$streamflow$MM * 62/14*1000
+MM_stream = chap$streamflow$MM
+MH_Conc=chap$stream_NO3$MH / chap$streamflow$MH * 62/14*1000
+MH_stream = chap$streamflow$MH
+HL_Conc=chap$stream_NO3$HL / chap$streamflow$HL * 62/14*1000
+HL_stream = chap$streamflow$HL
+HM_Conc=chap$stream_NO3$HM / chap$streamflow$HM * 62/14*1000
+HM_stream = chap$streamflow$HM
+HH_Conc=chap$stream_NO3$HH / chap$streamflow$HH * 62/14*1000
+HH_stream = chap$streamflow$HH
+ymin=min(c(LL_Conc,LM_Conc,LH_Conc,ML_Conc,MM_Conc,MH_Conc,HL_Conc,HM_Conc,HH_Conc))
+ymax=max(c(LL_Conc,LM_Conc,LH_Conc,ML_Conc,MM_Conc,MH_Conc,HL_Conc,HM_Conc,HH_Conc))
+par(mfrow=c(3,3))
+plot(LL_stream[targetperiod],LL_Conc[targetperiod],main='LL',xlab='Stream, mm/day',ylab='NO3 Concen, in mg/L',log='xy',xlim=c(0.001,10),ylim=c(ymin+0.01,ymax))
+plot(LM_stream[targetperiod],LM_Conc[targetperiod],main='LM',xlab='Stream, mm/day',ylab='NO3 Concen, in mg/L',log='xy',xlim=c(0.001,10),ylim=c(ymin+0.01,ymax))
+plot(LH_stream[targetperiod],LH_Conc[targetperiod],main='LH',xlab='Stream, mm/day',ylab='NO3 Concen, in mg/L',log='xy',xlim=c(0.001,10),ylim=c(ymin+0.01,ymax))
+plot(ML_stream[targetperiod],ML_Conc[targetperiod],main='ML',xlab='Stream, mm/day',ylab='NO3 Concen, in mg/L',log='xy',xlim=c(0.001,10),ylim=c(ymin+0.01,ymax))
+plot(MM_stream[targetperiod],MM_Conc[targetperiod],main='MM',xlab='Stream, mm/day',ylab='NO3 Concen, in mg/L',log='xy',xlim=c(0.001,10),ylim=c(ymin+0.01,ymax))
+plot(MH_stream[targetperiod],MH_Conc[targetperiod],main='MH',xlab='Stream, mm/day',ylab='NO3 Concen, in mg/L',log='xy',xlim=c(0.001,10),ylim=c(ymin+0.01,ymax))
+plot(HL_stream[targetperiod],HL_Conc[targetperiod],main='HL',xlab='Stream, mm/day',ylab='NO3 Concen, in mg/L',log='xy',xlim=c(0.001,10),ylim=c(ymin+0.01,ymax))
+plot(HM_stream[targetperiod],HM_Conc[targetperiod],main='HM',xlab='Stream, mm/day',ylab='NO3 Concen, in mg/L',log='xy',xlim=c(0.001,10),ylim=c(ymin+0.01,ymax))
+plot(HH_stream[targetperiod],HH_Conc[targetperiod],main='HH',xlab='Stream, mm/day',ylab='NO3 Concen, in mg/L',log='xy',xlim=c(0.001,10),ylim=c(ymin+0.01,ymax))
+}
+plot_feature=function(feature, feature_name, unit_name,mod,targetperiod){
+LL=feature_calcul(feature$LL,mod,targetperiod)
+LM=feature_calcul(feature$LM,mod,targetperiod)
+LH=feature_calcul(feature$LH,mod,targetperiod)
+ML=feature_calcul(feature$ML,mod,targetperiod)
+MM=feature_calcul(feature$MM,mod,targetperiod)
+MH=feature_calcul(feature$MH,mod,targetperiod)
+HL=feature_calcul(feature$HL,mod,targetperiod)
+HM=feature_calcul(feature$HM,mod,targetperiod)
+HH=feature_calcul(feature$HH,mod,targetperiod)
+if (mod!=2){
+x=c(0,1,2)
+y1=c(LL,ML,HL)
+y2=c(LM,MM,HM)
+y3=c(LH,MH,HH)
+v1=c(0,1,2)
+v2=c("12%","25%","39%")
+ylab_t = sprintf('Unit %s', unit_name)
+if(mod==1){title = sprintf("%s (Mean) in 2011",feature_name)
+}else if(mod==2){title = sprintf("Percentage Change in Mean %s",feature_name)
+}else if(mod==3){title = sprintf("Other mean %s",feature_name)
+}else if(mod==4){title = sprintf("%s (Max) in 2011",feature_name)
+}else if(mod==5){title = sprintf("Dry max %s",feature_name)
+}else if(mod==6){title = sprintf("Other max %s",feature_name)
+}else if(mod==7){title = sprintf("%s (Min) in 2011",feature_name)
+}else if(mod==8){title = sprintf("Dry min %s",feature_name)
+}else if(mod==9){title = sprintf("Other min %s",feature_name)
+}else if(mod==10){title = sprintf("Storm var %s",feature_name)
+}else if(mod==14){title = sprintf("%s Annual ",feature_name)
+}else if(mod==12){title = sprintf("Other var %s",feature_name)
+}else if(mod==0){title=sprintf("%s (Mean) in 2011",feature_name)}
+y_min=min(y1,min(y2,y3,na.rm=TRUE),na.rm=TRUE)
+y_max=max(y1,max(y2,y3,na.rm=TRUE),na.rm=TRUE)
+plot(x,y1,pch=15,col="blue",xaxt="n",
+ylim=c(y_min,y_max),xlab='TIA',ylab=ylab_t,
+cex=1.5,main=title,cex.main=1)
+axis(side=1,
+at=v1,
+labels=v2,
+tck=-.1,
+tcl=-0.5,
+cex.axis=1.05,
+col.axis="blue")
+#    font.axis=5)
+points(x,y2,pch=16,col="black",cex=1.5)
+points(x,y3,pch=17,col="red",cex=1.5)
+grid(nx=6,ny=NULL,
+col='lightgray',
+lty='dotted',
+lwd=par("lwd"))
+#equilogs=TRUE)
+#legend("bottomright",
+#       c('Low EIA','Med EIA','High EIA'),
+#       col=c("blue","black","red"),
+#       pch=c(15,16,17))
+}
+else if (mod==2){
+x=c(0,1,2)
+y1=c(0,(ML-LL)/LL*100,(HL-LL)/LL*100)
+y2=c((LM-LL)/LL*100,(MM-LL)/LL*100,(HM-LL)/LL*100)
+y3=c((LH-LL)/LL*100,(MH-LL)/LL*100,(HH-LL)/LL*100)
+v1=c(0,1,2)
+v2=c("12%","25%","39%")
+ylab_t = sprintf('Percentage Change')
+if(mod==1){title = sprintf("%s (Mean) in 2011",feature_name)
+}else if(mod==2){title = sprintf("Percentage Change in Mean %s",feature_name)
+}else if(mod==3){title = sprintf("Other mean %s",feature_name)
+}else if(mod==4){title = sprintf("%s (Max) in 2011",feature_name)
+}else if(mod==5){title = sprintf("Dry max %s",feature_name)
+}else if(mod==6){title = sprintf("Other max %s",feature_name)
+}else if(mod==7){title = sprintf("%s (Min) in 2011",feature_name)
+}else if(mod==8){title = sprintf("Dry min %s",feature_name)
+}else if(mod==9){title = sprintf("Other min %s",feature_name)
+}else if(mod==10){title = sprintf("Storm var %s",feature_name)
+}else if(mod==14){title = sprintf("%s Annual",feature_name)
+}else if(mod==12){title = sprintf("Other var %s",feature_name)
+}else if(mod==0){title=sprintf("%s (Mean) in 2011",feature_name)}
+y_min=min(y1,min(y2,y3,na.rm=TRUE),na.rm=TRUE)
+y_max=max(y1,max(y2,y3,na.rm=TRUE),na.rm=TRUE)
+plot(x,y1,pch=15,col="blue",xaxt="n",
+ylim=c(y_min,y_max),xlab='TIA',ylab=ylab_t,
+cex=1.5,main=title,cex.main=1)
+axis(side=1,
+at=v1,
+labels=v2,
+tck=-.1,
+tcl=-0.5,
+cex.axis=1.05,
+col.axis="blue")
+#    font.axis=5)
+points(x,y2,pch=16,col="black",cex=1.5)
+points(x,y3,pch=17,col="red",cex=1.5)
+grid(nx=6,ny=NULL,
+col='lightgray',
+lty='dotted',
+lwd=par("lwd"))
+}
+}
+feature_calcul=function(LL,mod,targetperiod){
+if (mod==1) {   ####
+return(mean(LL[targetperiod]))
+}
+else if(mod==2){ # percentage
+return(mean(LL[targetperiod]))
+}
+else if(mod==3){
+return(mean(LL[other_period]))
+}
+else if(mod==4){  ###
+return(max(LL[targetperiod]))
+}
+else if(mod==5){
+return(max(LL[dry_period]))
+}
+else if(mod==6){
+return(max(LL[other_period]))
+}
+else if(mod==7){  ####
+return(min(LL[targetperiod]))
+}
+else if(mod==8){
+return(min(LL[dry_period]))
+}
+else if(mod==9){
+return(min(LL[other_period]))
+}
+else if(mod==10){  ####
+return(var(LL[targetperiod]))
+}
+else if(mod==11){
+return(var(LL[dry_period]))
+}
+else if(mod==12){
+return(var(LL[other_period]))
+}
+else if(mod==0){
+return(mean(LL[targetperiod]))
+}
+else if(mod==14){
+return(sum(LL[targetperiod]))
+}
+}
+plot_vege_comp=function(chap_feature,grass_feature, oak_feature,mod, targetperiod,name,unit){
+chap_LL=feature_calcul(chap_feature$LL,mod,targetperiod)
+chap_LM=feature_calcul(chap_feature$LM,mod,targetperiod)
+chap_LH=feature_calcul(chap_feature$LH,mod,targetperiod)
+chap_ML=feature_calcul(chap_feature$ML,mod,targetperiod)
+chap_MM=feature_calcul(chap_feature$MM,mod,targetperiod)
+chap_MH=feature_calcul(chap_feature$MH,mod,targetperiod)
+chap_HL=feature_calcul(chap_feature$HL,mod,targetperiod)
+chap_HM=feature_calcul(chap_feature$HM,mod,targetperiod)
+chap_HH=feature_calcul(chap_feature$HH,mod,targetperiod)
+oak_LL=feature_calcul(oak_feature$LL,mod,targetperiod)
+oak_LM=feature_calcul(oak_feature$LM,mod,targetperiod)
+oak_LH=feature_calcul(oak_feature$LH,mod,targetperiod)
+oak_ML=feature_calcul(oak_feature$ML,mod,targetperiod)
+oak_MM=feature_calcul(oak_feature$MM,mod,targetperiod)
+oak_MH=feature_calcul(oak_feature$MH,mod,targetperiod)
+oak_HL=feature_calcul(oak_feature$HL,mod,targetperiod)
+oak_HM=feature_calcul(oak_feature$HM,mod,targetperiod)
+oak_HH=feature_calcul(oak_feature$HH,mod,targetperiod)
+grass_LL=feature_calcul(grass_feature$LL,mod,targetperiod)
+grass_LM=feature_calcul(grass_feature$LM,mod,targetperiod)
+grass_LH=feature_calcul(grass_feature$LH,mod,targetperiod)
+grass_ML=feature_calcul(grass_feature$ML,mod,targetperiod)
+grass_MM=feature_calcul(grass_feature$MM,mod,targetperiod)
+grass_MH=feature_calcul(grass_feature$MH,mod,targetperiod)
+grass_HL=feature_calcul(grass_feature$HL,mod,targetperiod)
+grass_HM=feature_calcul(grass_feature$HM,mod,targetperiod)
+grass_HH=feature_calcul(grass_feature$HH,mod,targetperiod)
+data_feature=c(chap_LL,chap_LM,chap_LH,chap_ML,chap_MM,chap_MH,chap_HL,chap_HM,chap_HH,
+grass_LL,grass_LM,grass_LH,grass_ML,grass_MM,grass_MH,grass_HL,grass_HM,grass_HH,
+oak_LL,oak_LM,oak_LH,oak_ML,oak_MM,oak_MH,oak_HL,oak_HM,oak_HH
+)
+data_label=c('Chap','Chap','Chap','Chap','Chap','Chap','Chap','Chap','Chap',
+'Grass','Grass','Grass','Grass','Grass','Grass','Grass','Grass','Grass',
+'Oak','Oak','Oak','Oak','Oak','Oak','Oak','Oak','Oak'
+)
+#len=length(data_feature)
+#for (i in 1:len/3){
+#  data_label[i]='Chap'
+#}
+#for (i in (len/3+1):len*2/3){
+#  data_label[i]='Grass'
+#}
+#for (i in (len*2/3+1):len){
+#  data_label[i]='Oak'
+#}
+df = data.frame(data_feature,data_label)
+boxplot(data_feature~data_label, data=df,main=name,
+xlab="Vegetation Types",ylab=unit)
+}
+par(mfrow=c(1,1))
+mod=14
+plot_vege_comp(chap$trans,grass$trans,oak$trans,mod,targetperiod,'Annual Transpiration','mm per hillslope area')
+# Chap, with N distribution: Even
+chap=create_list('')
+chap_N10=create_list('N10_')
+oak=create_list('oak_')
+oak_N10=create_list('oak_N10_')
+grass=create_list('grass_')
+grass_N10=create_list('grass_N10_')
