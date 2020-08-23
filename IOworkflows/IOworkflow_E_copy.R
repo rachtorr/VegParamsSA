@@ -2,20 +2,25 @@
 library(RHESSysIOinR)
 library(tidyverse)
 library(sensitivity)
-source("~/RHESSysIOinR-master/R/select_output_variables_R.R")
-setwd("~/Google Drive File Stream/My Drive/patches/scripts")
+source("~/RHESSysIOinR/R/select_output_variables_R.R")
+setwd("~/VegParamsSA/scripts")
+
+# new output folder: 
+#"~/../../scratch/ratorres/" 
+
+## put nice in front of command - gives it less priority 
 
 # 1: set up input files and command line options
 # RHESSys Inputs
 input_rhessys <- list()
-input_rhessys$rhessys_version <- "~/RHESSys-naomitest2/bin/rhessys7.2"
+input_rhessys$rhessys_version <- "~/RHESSys/bin/rhessys7.2"
 input_rhessys$tec_file <- "../tecfiles/tec.coast"
 input_rhessys$world_file <- "../worldfiles/OakPatch.world.0"
 input_rhessys$world_hdr_prefix <- "../worldfiles/OakPatch.hdr"
 input_rhessys$flow_file <- "../flowtables/OakPatch.flow"
 input_rhessys$start_date <- "1947 10 1 1"
 input_rhessys$end_date <- "2007 10 2 2"
-input_rhessys$output_folder <- "../out/RHESSysIOinR_output"
+input_rhessys$output_folder <- "~/../../scratch/ratorres/out"
 input_rhessys$output_filename <- "evergreen.sob"
 input_rhessys$command_options <- c("-b -g -climrepeat")
 
@@ -72,6 +77,8 @@ output_variables <- data.frame(out_file=character(), variable=character(), strin
 output_variables[1,] <- data.frame("bd", "lai", stringsAsFactors=FALSE)
 output_variables[2,] <- data.frame("bd", "height", stringsAsFactors = FALSE)
 output_variables[3,] <- data.frame("bd", "plantc", stringsAsFactors = FALSE)
+output_variables[11,] <- data.frame("bd", "rootdepth", stringsAsFactors=FALSE)
+
 output_variables[4,] <- data.frame("cdg", "leafc", stringsAsFactors=FALSE)
 output_variables[5,] <- data.frame("cdg", "live_stemc", stringsAsFactors=FALSE)
 output_variables[6,] <- data.frame("cdg", "live_crootc", stringsAsFactors=FALSE)
@@ -79,7 +86,6 @@ output_variables[7,] <- data.frame("cdg", "dead_stemc", stringsAsFactors = FALSE
 output_variables[8,] <- data.frame("cdg", "dead_crootc", stringsAsFactors=FALSE)
 output_variables[9,] <- data.frame("cdg", "dead_leafc", stringsAsFactors = FALSE)
 output_variables[10,] <- data.frame("cdg", "leafc_store", stringsAsFactors=FALSE)
-output_variables[11,] <- data.frame("bd", "rootdepth", stringsAsFactors=FALSE)
 
 #########################################################################
 # make tec file - neeed to add part from generate_input_files
@@ -136,7 +142,7 @@ if (is.null(input_def_list[1]) == FALSE){
     X1 <-inner_join(option_sets_def_par1[[1]], option_sets_def_par1[[2]], by="group_id") %>% dplyr::select(-group_id)
     X2 <- inner_join(option_sets_def_par2[[1]], option_sets_def_par2[[2]], by="group_id") %>% dplyr::select(-group_id)
     
-    run_sob <- sobol2007(model=NULL, X1, X2, nboot=100)
+    run_sob <- soboljansen(model=NULL, X1, X2, nboot=100)
     
     # Attach group ID to option_sets_def_par
     tmp <- seq_along(1:nrow(run_sob$X))
@@ -185,7 +191,7 @@ n = nrow(option_sets_def_par[[1]])
 # start here to run
 if(nrow(option_sets_def_par[[1]])==nrow(option_sets_all)){
 
-  saveRDS(run_sob, "../out/RHESSysIOinR_output/allsim/sobol2007output.rds")
+  saveRDS(run_sob, "../out/RHESSysIOinR_output/allsim/soboljansenoutput.rds")
   write.csv(option_sets_all, file.path(input_rhessys$output_folder, paste(input_rhessys$output_filename, "_all_options.csv", sep="")), row.names = FALSE, quote=FALSE)
 
   option_sets_rhessys_rows <- nrow(option_sets_all)
