@@ -37,28 +37,27 @@ input_hdr_list$base_stations <- c("../clim/mission_base")
 # sample input def list - can change parameters
 # [1] on stratum_def corresponds to veg file listed above
 # parameter method LHC - c(low, high, n=number of runs)
-n = 50
-#nsp = 1250
+n = 300
 input_def_list <- list()
 input_def_list <- list(
-  list(input_hdr_list$soil_def[1], "pore_size_index", c(0.15,0.7, n)),
+  list(input_hdr_list$soil_def[1], "pore_size_index", c(0.55,0.7, n)),
   list(input_hdr_list$soil_def[1], "psi_air_entry", c(0.05, 3, n)),
-  list(input_hdr_list$stratum_def[1], "epc.leaf_cn", c(30.0125, 85, n)),
-  list(input_hdr_list$stratum_def[1], "epc.branch_turnover", c(0.01, 0.05, n)),
-  list(input_hdr_list$stratum_def[1], "epc.gl_smax", c(0.0025, 0.006, n)),
+  list(input_hdr_list$stratum_def[1], "epc.leaf_cn", c(30.0125, 65, n)),
+  list(input_hdr_list$stratum_def[1], "epc.branch_turnover", c(0.01, 0.04, n)),
+  list(input_hdr_list$stratum_def[1], "epc.gl_smax", c(0.0025, 0.004, n)),
   list(input_hdr_list$stratum_def[1], "epc.flnr_age_mult", c(1.00025, 1.99975, n)),
   list(input_hdr_list$stratum_def[1], "epc.litter_moist_coef", c(5.00125e-05, 0.00069985, n)),
   list(input_hdr_list$stratum_def[1], "epc.psi_close", c(-9, -3, n)),
   list(input_hdr_list$stratum_def[1], "mrc.q10", c(1.8, 2.2, n)),
   list(input_hdr_list$stratum_def[1], "epc.vpd_close", c(2500.875, 5993.125, n)),
-  list(input_hdr_list$stratum_def[1], "epc.leaf_turnover", c(0.2, 0.5, n)),
+  list(input_hdr_list$stratum_def[1], "epc.leaf_turnover", c(0.12, 0.425, n)),
   list(input_hdr_list$stratum_def[1], "epc.froot_turnover", c(0.2, 0.7, n)),
   list(input_hdr_list$stratum_def[1], "epc.storage_transfer_prop", c(0.475, 0.575, n)),
   list(input_hdr_list$stratum_def[1], "epc.height_to_stem_coef", c(0.1501875, 0.9492, n)),
-  list(input_hdr_list$stratum_def[1], "epc.waring_pa", c(0.05, 0.8999125, n)),
-  list(input_hdr_list$stratum_def[1], "epc.root_growth_direction", c(0.5, 2, n)),
-  list(input_hdr_list$stratum_def[1], "epc.root_distrib_parm", c(1.2, 4.5, n)),
-  list(input_hdr_list$stratum_def[1], "epc.proj_sla", c(4.5, 18, n)),
+  list(input_hdr_list$stratum_def[1], "epc.waring_pa", c(0.05, 0.8, n)),
+  list(input_hdr_list$stratum_def[1], "epc.root_growth_direction", c(0.5, 1.5, n)),
+  list(input_hdr_list$stratum_def[1], "epc.root_distrib_parm", c(2.5, 4.25, n)),
+  list(input_hdr_list$stratum_def[1], "epc.proj_sla", c(6, 13, n)),
   list(input_hdr_list$stratum_def[1], "epc.alloc_stemc_leafc", c(1.3, 1.8, n)),
   list(input_hdr_list$stratum_def[1], "epc.ext_coef", c(0.650025, 0.749975, n)),
   list(input_hdr_list$stratum_def[1], "specific_rain_capacity", c(0.000100025, 0.000199975, n)),
@@ -68,7 +67,14 @@ input_def_list <- list(
   list(input_hdr_list$stratum_def[1], "epc.netpabs_shade", c(0.1, 0.4, n)),
   list(input_hdr_list$stratum_def[1], "epc.netpabs_age_mult", c(1.00025, 1.99975, n)),
   list(input_hdr_list$stratum_def[1], "epc.cpool_mort_fract", c(0.001, 0.05, n)),
-  list(input_hdr_list$stratum_def[1], "epc.min_percent_leafg", c(0.001, 0.01, n))
+  list(input_hdr_list$stratum_def[1], "epc.min_percent_leafg", c(0.001, 0.01, n)),
+  list(input_hdr_list$stratum_def[1], "epc.livewood_turnover", c(0.02, 0.1, n)),
+  list(input_hdr_list$stratum_def[1], "epc.waring_pb", c(0.05, 1.0, n)),
+  list(input_hdr_list$stratum_def[1], "epc.max_storage_percent", c(0.2, 0.4, n)),
+  list(input_hdr_list$stratum_def[1], "epc.min_leaf_carbon", c(0.00102, 0.02, n)),
+  list(input_hdr_list$stratum_def[1], "epc.resprout_leaf_carbon", c(0.005, 0.01, n)),
+  list(input_hdr_list$stratum_def[1], "epc.alloc_frootc_leafc", c(0.3, 1.2, n)),
+  list(input_hdr_list$stratum_def[1], "epc.frootc_crootc", c(0.7, 1.25, n))
 )
 
 
@@ -166,7 +172,7 @@ option_sets_all <- make_all_option_table(parameter_method,
                                          option_sets_standard_par=NULL,
                                          option_sets_dated_seq)
 
-
+nrow(option_sets_all)
 # command line parameters
 # values from script, calibrated by Janet or Erin or someone for Rattlesnake / Mission creek
 n = nrow(option_sets_def_par[[1]])

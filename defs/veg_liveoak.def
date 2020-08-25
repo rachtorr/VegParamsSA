@@ -76,7 +76,7 @@ combined       epc.allocation_flag
 0.321487246681563       epc.psi_slope
 0.112150453233782       epc.waring_pa
 0.05					epc.waring_pb
-12     epc.max_root_depth
+16.00     epc.max_root_depth
 0.307169949039025       epc.flnr_sunlit
 0.126489673183996       epc.flnr_shade
 0.367569883858207       epc.netpabs_sunlit
