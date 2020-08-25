@@ -7,25 +7,45 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(reshape2)
-source("readin_selected_vars.R")
+
+```
+
+```{r func}
+
+# script for reading in output from changing def file and outputing from
+readin_selected_vars <- function(vars, dir){
+
+    readout <- function(var){
+    p = read.csv(paste(dir,var, sep = "/"))
+    tomelt <- as.data.frame(p) %>% mutate(date=as.Date(paste(year,month,day, sep="-"))) %>% 
+      dplyr::select(c(-day, -month, - year, -basinID)) 
+    
+    toprint <- melt(as.data.frame(tomelt), id.var='date')
+      
+  }
+  
+  todf <- lapply(vars, FUN=readout)
+  
+  df <- unlist(todf)
+  
+  colnames(df) <- c("day","run","date",vars)
+  return(df)
+}
+
+
 
 ```
 
 
+
+
 ```{r data, message=FALSE, echo=F}
  
-vars = c("dead_crootc",
-         "dead_leafc",
-         "dead_stemc",
-         "leafc",
-         "leafc_store",
-         "live_crootc",
-         "live_stemc",
-         "height",
+vars = c("height",
          "lai",
          "plantc",
          "rootdepth")
-read <- readin_selected_vars(vars,  dir="../out/RHESSysIOinR_output/allsim/", start_date="2002-09-30", end_date = "2012-09-30" )
+read <- readin_selected_vars(vars,  dir="~/../../scratch/ratorres/out/allsim/", start_date="2002-09-30", end_date = "2012-09-30" )
 
 split_date <- str_split(read$date, pattern="-")
 #  
@@ -44,9 +64,9 @@ read_ann <- read %>%
   dplyr::summarize_all(mean)
 
 
-params <- read.csv("../out/RHESSysIOinR_output/evergreen.sob_all_options.csv")
+params <- read.csv("~/../../scratch/ratorres/out/evergreen.sob_all_options.csv")
 # select only parameters
-p <- params[,14:42]
+p <- params[,14:49]
 
 p_names <- c(
       "pore_size_index",
@@ -77,20 +97,27 @@ p_names <- c(
        "epc.netpabs_shade",
        "epc.netpabs_age_mult",
       "epc.cpool_mort_fract",
-       "epc.min_percent_leafg")
+       "epc.min_percent_leafg",
+      "epc.livewood_turnover",
+      "epc.waring_pb",
+      "epc.max_storage_percent",
+      "epc.min_leaf_carbon",
+      "epc.resprout_leaf_carbon",
+      "epc.alloc_frootc_leafc",
+      "epc.frootc_crootc")
 
 colnames(p) <- c(p_names)
 evergreen <- inner_join(read_ann, p, by="run")
 
-rs_dat <- read.csv("../../plant_params/alonzo_data_df.csv")
+rs_dat <- read.csv("~/VegParamsSA/data/alonzo_data_df.csv")
 rs_dat <- dplyr::filter(rs_dat, fractional_cov > 0.7)
 
-rs_dat2 <- read.csv("data/weighted_tree_summary.csv")
+rs_dat2 <- read.csv("~/VegParamsSA/data/weighted_tree_summary.csv")
 
 ```
 
 
-```{r probs, echo=FALSE, message=FALSE}
+```{r probs, echo=FALSE, message=FALSE, eval=FALSe}
 p <- c(0.25, 0.5, 0.75)
 
 p_n <- c('Q1','Q2','Q3')
@@ -106,7 +133,7 @@ p_funs <- map(p, ~partial(quantile, probs = .x, na.rm = TRUE)) %>%
 
 the first round of filtering is done with root to shoot ratio (rsr) to get higher values of plant carbon 
 
-```{r pft, warning=FALSE, message=FALSE, echo=FALSE}
+```{r pft, warning=FALSE, message=FALSE, echo=FALSE, eval=FALSE}
 
 baad <- read.csv("../../plant_params/baad_data/baad_data.csv")
 
@@ -161,7 +188,7 @@ compare
 
 # Broadleaf Evergreens 
 
-```{r broad, warning=FALSE, message=FALSE, echo=FALSE}
+```{r broad, warning=FALSE, message=FALSE, echo=FALSE, eval=FALSE}
 
 # set quartiles from baad ratios 
 quartiles <- ratios %>% 
