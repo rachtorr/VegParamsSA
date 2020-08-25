@@ -1,0 +1,266 @@
+---
+title: "Sobol_evergreen"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(RHESSysIOinR)
+library(tidyverse)
+library(sensitivity)
+library(pse)
+library(reshape2)
+
+sobolout <- readRDS("../../out/RHESSysIOinR_output/allsim/sobolEffoutput.rds")
+
+```
+
+```{r func, include = FALSE}
+# script for reading in output from changing def file and outputing from
+# readin_selected_vars <- function(vars, dir){
+#   test = read.csv(paste(dir,vars[1], sep = "/"))
+#   days = nrow(test)
+#   n = ncol(test)
+#   df = data.frame(day = rep(1:days, n), run=rep(1:n, each=days))
+#   for(i in 1:length(vars)){
+#     p = read.csv(paste(dir,vars[i], sep = "/"))
+#     melt <- melt(p)
+#     colnames(melt) <- c("var",paste(vars[i]))
+# 
+#     df <- cbind(df, melt[,2])
+#   }
+#   colnames(df) <- c("day","run",vars)
+#   return(df)
+# }
+
+source("../readin_selected_vars.R")
+
+```
+
+
+
+```{r data, include = FALSE}
+ 
+vars = c("height",
+         "lai",
+         "plantc",
+         "rootdepth")
+read <- readin_selected_vars(dir = "../../out/RHESSysIOinR_output/allsim", vars, start_date = "2002-09-30", end_date="2012-09-30")
+
+read_ann <- read %>%  
+  dplyr::group_by(run) %>%
+  dplyr::summarize_all(mean, na.rm=T)
+
+params <- read.csv("../../out/RHESSysIOinR_output/evergreen.sob_all_options.csv")
+# select only parameters
+p <- params[,14:49]
+
+p_names <- c(
+      "pore_size_index",
+      "psi_air_entry",
+      "run",
+       "epc.leaf_cn",
+       "epc.branch_turnover",
+       "epc.gl_smax",
+       "epc.flnr_age_mult",
+       "epc.litter_moist_coef",
+       "epc.psi_close",
+       "mrc.q10",
+       "epc.vpd_close",
+       "epc.leaf_turnover",
+       "epc.froot_turnover",
+       "epc.storage_transfer_prop",
+       "epc.height_to_stem_coef",
+       "epc.waring_pa",
+       "epc.root_growth_direction",
+        "epc.root_distrib_parm",
+       "epc.proj_sla",
+       "epc.alloc_stemc_leafc",
+       "epc.ext_coef",
+       "specific_rain_capacity",
+       "epc.flnr_sunlit",
+       "epc.flnr_shade",
+       "epc.netpabs_sunlit",
+       "epc.netpabs_shade",
+       "epc.netpabs_age_mult",
+       "epc.cpool_mort_fract",
+       "epc.min_percent_leafg",
+      "epc.livewood_turnover",
+      "epc.waring_pb",
+      "epc.max_storage_percent",
+      "epc.min_leaf_carbon",
+      "epc.resprout_leaf_carbon",
+      "epc.alloc_frootc_leafc",
+      "epc.frootc_crootc"
+      )
+
+colnames(p) <- c(p_names)
+sann <- inner_join(read_ann, p, by="run")
+
+```
+
+```{r check, include=FALSE}
+# tell for the different outputs
+sens_lai <- sensitivity::tell(sobolout,read_ann$lai)
+sens_ht <- sensitivity::tell(sobolout, read_ann$height)
+sens_c <- sensitivity::tell(sobolout, read_ann$plantc)
+
+
+p_names2 <- p_names[-3]
+```
+
+```{r timeseries, echo=FALSE}
+mean <- read %>% group_by(date) %>% 
+  summarize_at(vars(lai, plantc, height, rootdepth), funs(mean))
+
+stats <- read %>%  
+  dplyr::group_by(date) %>% 
+  dplyr::summarize(
+    lai_first = quantile(lai, probs = c(0.25)), 
+    lai_third = quantile(lai, probs = c(0.75)),
+    pc_first = quantile(plantc, probs = c(0.25)), 
+    pc_third = quantile(plantc, probs = c(0.75)),
+    ht_first = quantile(height, probs = c(0.25)), 
+    ht_third = quantile(height, probs = c(0.75)),
+    rd_first = quantile(rootdepth, probs = c(0.25)), 
+    rd_third = quantile(rootdepth, probs = c(0.75)))
+
+## plot
+ggplot(read) + geom_line(aes(x=date, y=lai), col='grey', alpha=0.5) + 
+  geom_line(data=mean, aes(x=date, y=lai), col='red') + 
+  geom_line(data=stats, aes(x=date, y=lai_first, group=1), col='blue', linetype='dashed') +
+  geom_line(data=stats, aes(x=date, y=lai_third, group=1), col='blue', linetype='dashed')
+
+ggplot(read) + geom_line(aes(x=date, y=plantc), col='grey', alpha=0.5) + 
+  geom_line(data=mean, aes(x=date, y=plantc), col='red') + 
+  geom_line(data=stats, aes(x=date, y=pc_first, group=1), col='blue', linetype='dashed') +
+  geom_line(data=stats, aes(x=date, y=pc_third, group=1), col='blue', linetype='dashed')
+
+ggplot(read) + geom_line(aes(x=date, y=height), col='grey', alpha=0.5) + 
+  geom_line(data=mean, aes(x=date, y=height), col='red') + 
+  geom_line(data=stats, aes(x=date, y=ht_first, group=1), col='blue', linetype='dashed') +
+  geom_line(data=stats, aes(x=date, y=ht_third, group=1), col='blue', linetype='dashed')
+  
+ggplot(read) + geom_line(aes(x=date, y=rootdepth), col='grey', alpha=0.5) + 
+  geom_line(data=mean, aes(x=date, y=rootdepth), col='red') + 
+  geom_line(data=stats, aes(x=date, y=rd_first, group=1), col='blue', linetype='dashed') +
+  geom_line(data=stats, aes(x=date, y=rd_third, group=1), col='blue', linetype='dashed')
+
+
+
+```
+
+
+```{r ranks, echo=FALSE}
+lai_S <- ggplot(sens_lai$S) +
+  geom_col(aes(y=original, x=p_names2, fill=original),position="dodge") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("first order rank LAI") +
+  coord_flip()
+
+lai_T <- ggplot(sens_lai$T) +
+  geom_col(aes(y=original, x=p_names2, fill=original),position="dodge") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("total rank LAI") + coord_flip()
+
+lai_S
+lai_T
+
+
+ht_S <- ggplot(sens_ht$S) +
+  geom_col(aes(y=original, x=p_names2, fill=original),position="dodge") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("first order rank height") + coord_flip()
+
+ht_T <- ggplot(sens_ht$T) +
+  geom_col(aes(y=original, x=p_names2, fill=original),position="dodge") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("total rank height") + coord_flip()
+
+ht_S
+ht_T
+
+carb_S <- ggplot(sens_c$S) +
+  geom_col(aes(y=original, x=p_names2, fill=original),position="dodge") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("first order rank plantC") + coord_flip()
+
+carb_T <- ggplot(sens_c$T) +
+  geom_col(aes(y=original, x=p_names2, fill=original),position="dodge") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("total rank plantC") + coord_flip()
+
+carb_S
+carb_T
+
+```
+
+compare range of RHESSys model output with mean values from data 
+
+```{r rsdata, echo=FALSE}
+rs_dat1 <- read.csv("../data/rs_data_df.csv")
+rs_dat2 <- read.csv("../data/weighted_tree_summary.csv")
+
+model <- sann %>% dplyr::select(lai, height, plantc, rootdepth) %>% 
+  melt()
+
+obs <- rs_dat1 %>% dplyr::select(lai = lai,
+                          height = height,
+                          plantc = carbperarea) %>% 
+  melt() 
+
+mod <- ggplot(model) + geom_histogram(aes(x=value, fill=variable), position='dodge') +
+  scale_x_continuous(limits=c(0,20))
+  
+obsplot <- ggplot(obs) + geom_histogram(aes(x=value, fill=variable), position='dodge') +
+  scale_x_continuous(limits=c(0,20))
+
+lai <- ggplot() +
+  geom_histogram(data=sann, aes(x=lai, fill="model")) +
+  geom_histogram(data=rs_dat1, aes(x=lai, col="obs"),alpha=0.5)
+lai + ggtitle("LAI")
+
+ht <- ggplot() +
+  geom_histogram(data=sann, aes(x=height, fill="model")) +
+  geom_histogram(data=rs_dat1, aes(x=height, col="obs"),alpha=0.5)
+ht + ggtitle("Height")
+
+plantc <- ggplot() +
+  geom_histogram(data=sann, aes(x=plantc, fill="model")) +
+  geom_histogram(data=rs_dat1, aes(x=carbperarea, col="obs"),alpha=0.5)
+plantc + ggtitle("PlantC")
+
+rootdepth <- 
+plantc <- ggplot() +
+  geom_histogram(data=sann, aes(x=rootdepth)) 
+rootdepth
+
+
+```
+
+
+combine output and look at individual params
+```{r scatter, echo=FALSE}
+
+
+
+alloc <- ggplot(sann) + 
+  geom_jitter(aes(x=plantc, y=lai, col=epc.alloc_stemc_leafc))
+alloc 
+
+po <- ggplot(sann) + 
+  geom_jitter(aes(x=plantc, y=lai, col=epc.gl_smax))
+po 
+
+turnover <- ggplot(sann) + 
+  geom_jitter(aes(x=plantc, y=lai, col=epc.leaf_cn))
+turnover 
+
+sla <- ggplot(sann) + 
+  geom_jitter(aes(x=plantc, y=lai, col=epc.root_distrib_parm))
+sla 
+
+```
+
+
+
