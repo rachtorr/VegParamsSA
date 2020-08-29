@@ -8,32 +8,31 @@ knitr::opts_chunk$set(echo = TRUE)
 library(RHESSysIOinR)
 library(tidyverse)
 library(sensitivity)
-library(pse)
 library(reshape2)
 
-sobolout <- readRDS("../../out/RHESSysIOinR_output/allsim/sobolEffoutput.rds")
+sobolout <- readRDS("data/soboljansenoutput.rds")
 
 ```
 
 ```{r func, include = FALSE}
 # script for reading in output from changing def file and outputing from
-# readin_selected_vars <- function(vars, dir){
-#   test = read.csv(paste(dir,vars[1], sep = "/"))
-#   days = nrow(test)
-#   n = ncol(test)
-#   df = data.frame(day = rep(1:days, n), run=rep(1:n, each=days))
-#   for(i in 1:length(vars)){
-#     p = read.csv(paste(dir,vars[i], sep = "/"))
-#     melt <- melt(p)
-#     colnames(melt) <- c("var",paste(vars[i]))
-# 
-#     df <- cbind(df, melt[,2])
-#   }
-#   colnames(df) <- c("day","run",vars)
-#   return(df)
-# }
+readin_selected_vars <- function(vars, dir){
 
-source("../readin_selected_vars.R")
+    readout <- function(var){
+    p = read.csv(paste(dir,var, sep = "/"))
+    tomelt <- as.data.frame(p) %>% 
+      dplyr::select(-basinID) 
+    
+    toprint <- melt(as.data.frame(tomelt), id.vars=c('day', 'month', 'year'))
+      
+  }
+  
+  todf <- lapply(vars, FUN=readout)
+  df <- do.call(cbind, todf)
+  
+  return(df)
+}
+
 
 ```
 
@@ -45,13 +44,21 @@ vars = c("height",
          "lai",
          "plantc",
          "rootdepth")
-read <- readin_selected_vars(dir = "../../out/RHESSysIOinR_output/allsim", vars, start_date = "2002-09-30", end_date="2012-09-30")
+read <- readin_selected_vars(dir = "~/../../scratch/ratorres/out/allsim/", vars)
+colnames(read) <- c("day","month","year","run","height",
+                    "day1","month1","year1","run1", "lai",
+                    "day2","month2","year2","run2", "plantc",
+                    "day3","month3","year3","run3", "rootdepth")
+read <- read %>% dplyr::select(c("day", "month", "year", "run", all_of(vars)))
+spltrun <- str_split(read$run, pattern="_")
+read$run = as.numeric(lapply(spltrun, "[[", 2))
+
 
 read_ann <- read %>%  
   dplyr::group_by(run) %>%
   dplyr::summarize_all(mean, na.rm=T)
 
-params <- read.csv("../../out/RHESSysIOinR_output/evergreen.sob_all_options.csv")
+params <- read.csv("~/../../scratch/ratorres/out/evergreen.sob_all_options.csv")
 # select only parameters
 p <- params[,14:49]
 
@@ -109,7 +116,7 @@ sens_c <- sensitivity::tell(sobolout, read_ann$plantc)
 p_names2 <- p_names[-3]
 ```
 
-```{r timeseries, echo=FALSE}
+```{r timeseries, echo=FALSE, eval=FALSE}
 mean <- read %>% group_by(date) %>% 
   summarize_at(vars(lai, plantc, height, rootdepth), funs(mean))
 
@@ -198,8 +205,8 @@ carb_T
 compare range of RHESSys model output with mean values from data 
 
 ```{r rsdata, echo=FALSE}
-rs_dat1 <- read.csv("../data/rs_data_df.csv")
-rs_dat2 <- read.csv("../data/weighted_tree_summary.csv")
+rs_dat1 <- read.csv("data/rs_data_df.csv")
+rs_dat2 <- read.csv("data/weighted_tree_summary.csv")
 
 model <- sann %>% dplyr::select(lai, height, plantc, rootdepth) %>% 
   melt()

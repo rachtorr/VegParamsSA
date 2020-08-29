@@ -17,21 +17,18 @@ readin_selected_vars <- function(vars, dir){
 
     readout <- function(var){
     p = read.csv(paste(dir,var, sep = "/"))
-    tomelt <- as.data.frame(p) %>% mutate(date=as.Date(paste(year,month,day, sep="-"))) %>% 
-      dplyr::select(c(-day, -month, - year, -basinID)) 
+    tomelt <- as.data.frame(p) %>% 
+      dplyr::select(-basinID) 
     
-    toprint <- melt(as.data.frame(tomelt), id.var='date')
+    toprint <- melt(as.data.frame(tomelt), id.vars=c('day', 'month', 'year'))
       
   }
   
   todf <- lapply(vars, FUN=readout)
+  df <- do.call(cbind, todf)
   
-  df <- unlist(todf)
-  
-  colnames(df) <- c("day","run","date",vars)
   return(df)
 }
-
 
 
 ```
@@ -45,10 +42,15 @@ vars = c("height",
          "lai",
          "plantc",
          "rootdepth")
-read <- readin_selected_vars(vars,  dir="~/../../scratch/ratorres/out/allsim/", start_date="2002-09-30", end_date = "2012-09-30" )
+read <- readin_selected_vars(dir = "~/../../scratch/ratorres/out/allsim/", vars)
+colnames(read) <- c("day","month","year","run","height",
+                    "day1","month1","year1","run1", "lai",
+                    "day2","month2","year2","run2", "plantc",
+                    "day3","month3","year3","run3", "rootdepth")
+read <- read %>% dplyr::select(c("day", "month", "year", "run", all_of(vars)))
+spltrun <- str_split(read$run, pattern="_")
+read$run = as.numeric(lapply(spltrun, "[[", 2))
 
-split_date <- str_split(read$date, pattern="-")
-#  
 # read_ann <- read %>%
 #   mutate(year = as.numeric(lapply(split_date, "[[",1))) %>%
 #   dplyr::group_by(year, run) %>%
@@ -58,11 +60,19 @@ split_date <- str_split(read$date, pattern="-")
 #   ggtitle("avg annual LAI, red is avg across all runs and years")
 
 read_ann <- read %>%
-  mutate(year = as.numeric(lapply(split_date, "[[",1))) %>%
-  dplyr::filter(year > 2009) %>% 
+  dplyr::filter(month==6 | month==7) %>%
   dplyr::group_by(run) %>%
   dplyr::summarize_all(mean)
 
+### last six years included (same amount as drought in following decade)
+### only summer months june, july, august, because that's when data is from
+### going to filter by sd as well 
+read_summer <- read %>%
+  dplyr::filter(year > 2005) %>%
+  dplyr::filter(month==6 | month==7 | month==8) %>% 
+  dplyr::select(-day, -month, -year) %>% 
+  dplyr::group_by(run) %>%
+  dplyr::summarize_all(list(mean,sd))
 
 params <- read.csv("~/../../scratch/ratorres/out/evergreen.sob_all_options.csv")
 # select only parameters
@@ -107,7 +117,7 @@ p_names <- c(
       "epc.frootc_crootc")
 
 colnames(p) <- c(p_names)
-evergreen <- inner_join(read_ann, p, by="run")
+evergreen <- inner_join(read_summer, p, by="run")
 
 rs_dat <- read.csv("~/VegParamsSA/data/alonzo_data_df.csv")
 rs_dat <- dplyr::filter(rs_dat, fractional_cov > 0.7)
@@ -117,7 +127,7 @@ rs_dat2 <- read.csv("~/VegParamsSA/data/weighted_tree_summary.csv")
 ```
 
 
-```{r probs, echo=FALSE, message=FALSE, eval=FALSe}
+```{r probs, echo=FALSE, message=FALSE, eval=FALSE}
 p <- c(0.25, 0.5, 0.75)
 
 p_n <- c('Q1','Q2','Q3')
@@ -222,9 +232,6 @@ EA4 <- evergreen %>%
   dplyr::filter(smf < quartiles$smf_Q3[quartiles$pft=="EA"])
 # 2686 sets
 
-# select rhessys from root to shoot ratio 
-rh_eg <- EA3 %>% dplyr::select(lai, height, carbon=plantc) %>%
-  melt() 
 
 ggplot() + geom_boxplot(data=rh_eg, aes(x=variable, y=value, col='rhessys')) + 
   geom_point(data=rs_dat2, aes(x="carbon", y=mean_wt_carb, col='data')) + 
@@ -232,12 +239,7 @@ ggplot() + geom_boxplot(data=rh_eg, aes(x=variable, y=value, col='rhessys')) +
   geom_point(data=rs_dat2, aes(x="height", y=mean_wt_height, col='data'))
   ggtitle("comparing remote sensing wtd mean with filtered RH out")
 
-ggplot(rh_eg) + 
-  geom_density(aes(x=value, col=variable)) + 
-  ggtitle("model output")  
-  #geom_vline(data=rs_dat2, aes(xintercept=mean_wt_carb))
 
-ggplot(evergreen) + geom_jitter(aes(x=plantc, y=lai, col=height))
 
 ```
 
@@ -247,47 +249,47 @@ filtering by lai and plantc
 ```{r quag_filter, warning=F, echo=F}
 
 quag <- dplyr::filter(rs_dat2, class==81) 
+quag_full <- dplyr::filter(rs_dat, class==81)
 
 filter <- ggplot(quag) +
-  geom_jitter(data=evergreen, aes(x=plantc, y=lai)) + 
+  geom_jitter(data=evergreen, aes(x=plantc_fn1, y=lai_fn1)) + 
   geom_point(aes(x=mean_wt_carb, y=mean_wt_lai, col='mean')) + 
   geom_abline(aes(slope=0, intercept=low_lai, col='low')) + 
   geom_abline(aes(slope=0, intercept=high_lai, col='high')) +
   geom_vline(aes(xintercept=low_carb, col='low')) + 
   geom_vline(aes(xintercept=high_carb, col='high')) + ggtitle("QUAG")
+filter
 
 quag_params2 <- evergreen %>% 
-  dplyr::filter(plantc > quag$low_carb & plantc < quag$high_carb) %>% 
-  dplyr::filter(lai > quag$low_lai & lai < quag$high_lai)  
+  dplyr::filter(lai_fn1 > quag$low_lai & lai_fn1 < quag$high_lai) %>% 
+  dplyr::filter(lai_fn2 < quag$sd_wt_lai) %>% 
+  dplyr::filter(plantc_fn1 > quag$low_carb & plantc_fn1 < quag$high_carb &
+                  plantc_fn2 < quag$sd_wt_carb)
   # dplyr::filter(height > quag$low_ht & height < quag$high_ht)
 
-#filter + geom_jitter(data=quag_params2, aes(x=plantc, y=lai, col='sets'))
-
 check_ht <- ggplot() + 
-  geom_boxplot(data=quag_params2, aes(x='model', y=height)) + 
+  geom_boxplot(data=quag_params2, aes(x='model', y=height_fn1)) + 
   geom_abline(data=quag, aes(slope=0, intercept=low_ht, col='lower bound')) + 
   geom_abline(data=quag, aes(slope=0, intercept=high_ht, col='upper bound')) + 
   ggtitle("check height output")
-
-quag_full <- rs_dat %>% dplyr::filter(class==81) %>% 
-  dplyr::filter(carbon < 20)
+check_ht
 
 ggplot(quag_params2) + 
-  geom_density(aes(x=height), col='red') + 
+  geom_density(aes(x=height_fn1), col='red') + 
   geom_density(data=quag_full, aes(x=height), col='blue') + 
   ggtitle(paste("height (coast live oak n=", nrow(quag_params2),")", sep=""))
 
 ggplot(quag_params2) + 
-  geom_density(aes(x=lai, col='model')) + 
+  geom_density(aes(x=lai_fn1, col='model')) + 
   geom_density(data=quag_full, aes(x=lai, col='data')) + 
   ggtitle(paste("LAI (coast live oak n=", nrow(quag_params2),")", sep=""))
 
 ggplot(quag_params2) + 
-  geom_density(aes(x=plantc, col='model')) + 
+  geom_density(aes(x=plantc_fn1, col='model')) + 
   geom_density(data=quag_full, aes(x=carbon, col='data')) + 
   ggtitle(paste("carbon (coast live oak n=", nrow(quag_params2),")", sep=""))
 
-nrow(quag_params2)
+#nrow(quag_params2)
 
 ### Plot with parameters
 lai <- quag_params2
@@ -335,7 +337,7 @@ output = rbind(quag, sc, piun)
 
 # write.csv(output, "../out/RHESSysIOinR_output/allsim_evergreen/all_options_broadleaf_evergreen.csv")
 
-write.csv(quag, "../out/RHESSysIOinR_output/allsim/filtered_quag.csv")
+write.csv(quag, "data/filtered_quag2.csv")
 
 ```
 
