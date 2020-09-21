@@ -10,55 +10,28 @@ library(tidyverse)
 library(sensitivity)
 library(reshape2)
 
-sobolout <- readRDS("data/soboljansenoutput.rds")
+sobolout <- readRDS("out/soboljansenoutput.rds")
 
+source("readin_selected_vars.R")
 ```
-
-```{r func, include = FALSE}
-# script for reading in output from changing def file and outputing from
-readin_selected_vars <- function(vars, dir){
-
-    readout <- function(var){
-    p = read.csv(paste(dir,var, sep = "/"))
-    tomelt <- as.data.frame(p) %>% 
-      dplyr::select(-basinID) 
-    
-    toprint <- melt(as.data.frame(tomelt), id.vars=c('day', 'month', 'year'))
-      
-  }
-  
-  todf <- lapply(vars, FUN=readout)
-  df <- do.call(cbind, todf)
-  
-  return(df)
-}
-
-
-```
-
 
 
 ```{r data, include = FALSE}
  
 vars = c("height",
          "lai",
-         "plantc",
-         "rootdepth")
-read <- readin_selected_vars(dir = "~/../../scratch/ratorres/out/allsim/", vars)
-colnames(read) <- c("day","month","year","run","height",
-                    "day1","month1","year1","run1", "lai",
-                    "day2","month2","year2","run2", "plantc",
-                    "day3","month3","year3","run3", "rootdepth")
-read <- read %>% dplyr::select(c("day", "month", "year", "run", all_of(vars)))
-spltrun <- str_split(read$run, pattern="_")
-read$run = as.numeric(lapply(spltrun, "[[", 2))
+         "plantc")
+read <- readin_selected_vars(dir = "../../../scratch/ratorres/out/allsim", vars)
 
-
-read_ann <- read %>%  
+read_ann  <- read %>%  
+  dplyr::filter(year>2008 & year < 2012) %>% 
+  dplyr::filter(month==6 | month==7) %>% 
   dplyr::group_by(run) %>%
-  dplyr::summarize_all(mean, na.rm=T)
+  dplyr::summarize_at(vars(lai, height, plantc), list(mean), na.rm=T)
 
-params <- read.csv("~/../../scratch/ratorres/out/evergreen.sob_all_options.csv")
+read_drought <- read %>% dplyr::filter(year>2009 & year<2019) %>% dplyr::group_by(year, run) %>% summarize_at(vars(lai, height, plantc), list(mean))
+
+params <- read.csv("../../../scratch/ratorres/out/evergreen.sob_all_options.csv")
 # select only parameters
 p <- params[,14:49]
 
@@ -104,11 +77,13 @@ p_names <- c(
 colnames(p) <- c(p_names)
 sann <- inner_join(read_ann, p, by="run")
 
+fann <- inner_join(read_drought, p, by="run")
+
 ```
 
 ```{r check, include=FALSE}
 # tell for the different outputs
-sens_lai <- sensitivity::tell(sobolout,read_ann$lai)
+sens_lai <- sensitivity::tell(sobolout, read_ann$lai)
 sens_ht <- sensitivity::tell(sobolout, read_ann$height)
 sens_c <- sensitivity::tell(sobolout, read_ann$plantc)
 
@@ -117,8 +92,9 @@ p_names2 <- p_names[-3]
 ```
 
 ```{r timeseries, echo=FALSE, eval=FALSE}
+
 mean <- read %>% group_by(date) %>% 
-  summarize_at(vars(lai, plantc, height, rootdepth), funs(mean))
+  summarize_at(vars(lai, plantc, height), funs(mean))
 
 stats <- read %>%  
   dplyr::group_by(date) %>% 
@@ -128,9 +104,7 @@ stats <- read %>%
     pc_first = quantile(plantc, probs = c(0.25)), 
     pc_third = quantile(plantc, probs = c(0.75)),
     ht_first = quantile(height, probs = c(0.25)), 
-    ht_third = quantile(height, probs = c(0.75)),
-    rd_first = quantile(rootdepth, probs = c(0.25)), 
-    rd_third = quantile(rootdepth, probs = c(0.75)))
+    ht_third = quantile(height, probs = c(0.75)))
 
 ## plot
 ggplot(read) + geom_line(aes(x=date, y=lai), col='grey', alpha=0.5) + 
@@ -147,12 +121,6 @@ ggplot(read) + geom_line(aes(x=date, y=height), col='grey', alpha=0.5) +
   geom_line(data=mean, aes(x=date, y=height), col='red') + 
   geom_line(data=stats, aes(x=date, y=ht_first, group=1), col='blue', linetype='dashed') +
   geom_line(data=stats, aes(x=date, y=ht_third, group=1), col='blue', linetype='dashed')
-  
-ggplot(read) + geom_line(aes(x=date, y=rootdepth), col='grey', alpha=0.5) + 
-  geom_line(data=mean, aes(x=date, y=rootdepth), col='red') + 
-  geom_line(data=stats, aes(x=date, y=rd_first, group=1), col='blue', linetype='dashed') +
-  geom_line(data=stats, aes(x=date, y=rd_third, group=1), col='blue', linetype='dashed')
-
 
 
 ```
@@ -208,7 +176,7 @@ compare range of RHESSys model output with mean values from data
 rs_dat1 <- read.csv("data/rs_data_df.csv")
 rs_dat2 <- read.csv("data/weighted_tree_summary.csv")
 
-model <- sann %>% dplyr::select(lai, height, plantc, rootdepth) %>% 
+model <- sann %>% dplyr::select(lai, height, plantc) %>% 
   melt()
 
 obs <- rs_dat1 %>% dplyr::select(lai = lai,
@@ -237,10 +205,10 @@ plantc <- ggplot() +
   geom_histogram(data=rs_dat1, aes(x=carbperarea, col="obs"),alpha=0.5)
 plantc + ggtitle("PlantC")
 
-rootdepth <- 
-plantc <- ggplot() +
-  geom_histogram(data=sann, aes(x=rootdepth)) 
-rootdepth
+# rootdepth <- 
+# plantc <- ggplot() +
+#   geom_histogram(data=sann, aes(x=rootdepth)) 
+# rootdepth
 
 
 ```
