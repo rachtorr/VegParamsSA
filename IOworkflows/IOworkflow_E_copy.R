@@ -197,7 +197,7 @@ n = nrow(option_sets_def_par[[1]])
 # start here to run
 if(nrow(option_sets_def_par[[1]])==nrow(option_sets_all)){
 
-  saveRDS(run_sob, "../out/RHESSysIOinR_output/allsim/soboljansenoutput.rds")
+  saveRDS(run_sob, "../out/soboljansenoutput.rds")
   write.csv(option_sets_all, file.path(input_rhessys$output_folder, paste(input_rhessys$output_filename, "_all_options.csv", sep="")), row.names = FALSE, quote=FALSE)
 
   option_sets_rhessys_rows <- nrow(option_sets_all)

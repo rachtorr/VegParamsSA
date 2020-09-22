@@ -1,0 +1,264 @@
+---
+title: "parameter filtering"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(reshape2)
+library(RHESSysIOinR)
+library(gridExtra)
+source("readin_selected_vars.R")
+
+```
+
+#### Quercus agrifolia  
+
+From 9990 runs (thought it was 1000, but close enough)
+
+Filtering the parameters sets to match:
+
+1. The change in LAI from 2011-2014-2017 has to follow a similar pattern as the greenness in remote sensing data (Miller), where the change to 2014 is greater than the change to 2017, with 2011 as baseline
+2. The LAI / plantc / height have to be values within the range of the remote sensing data, at 95% confidence (Alonzo)  
+
+This is test for coastal live oak. Note that am not using the BAAD carbon ratio fractions here.  
+
+From sensitivity analysis (sobol.html), the top parameters that affect LAI include:
+
+- epc.waring_pa
+- epc.leaf_turnover
+- epc.gl_smax
+- epc.proj_sla
+- epc.root_growth_direction
+
+```{r data, message=FALSE, echo=F}
+ 
+vars = c("height",
+         "lai",
+         "plantc",
+         "rootdepth")
+read <- readin_selected_vars(vars,  dir="../../../scratch/ratorres/out/allsim")
+
+read_ann <- read %>%
+  dplyr::filter(year > 2008 & year < 2012) %>% 
+  dplyr::filter(month==6 | month==7) %>% 
+  dplyr::group_by(run) %>%
+  dplyr::summarize_at(vars(lai, plantc, height, rootdepth), list(mean))
+
+read_chng <- read %>% 
+  dplyr::filter(year == 2011 | year== 2014 | year == 2017)  %>% 
+  dplyr::filter(month==6 | month==7) %>% 
+  dcast(run ~ year, value.var='lai',mean) %>% 
+  mutate(change1 = (`2011`-`2014`)/`2011`) %>% 
+  mutate(change2 = (`2011`-`2017`)/`2011`)
+
+filt <-read_chng %>% dplyr::filter(change1 > change2)
+
+params <- read.csv("../../../scratch/ratorres/out/evergreen.sob_all_options.csv")
+# select only parameters
+p <- params[,14:49]
+
+p_names <- c(
+      "pore_size_index",
+      "psi_air",
+      "run",
+       "epc.leaf_cn",
+       "epc.branch_turnover",
+       "epc.gl_smax",
+       "epc.flnr_age_mult",
+       "epc.litter_moist_coef",
+       "epc.psi_close",
+       "mrc.q10",
+       "epc.vpd_close",
+       "epc.leaf_turnover",
+       "epc.froot_turnover",
+       "epc.storage_transfer_prop",
+       "epc.height_to_stem_coef",
+       "epc.waring_pa",
+       "epc.root_growth_direction",
+        "epc.root_distrib_parm",
+       "epc.proj_sla",
+       "epc.alloc_stemc_leafc",
+       "epc.ext_coef",
+       "specific_rain_capacity",
+       "epc.flnr_sunlit",
+       "epc.flnr_shade",
+       "epc.netpabs_sunlit",
+       "epc.netpabs_shade",
+       "epc.netpabs_age_mult",
+      "epc.cpool_mort_fract",
+       "epc.min_percent_leafg",
+      "epc.livewood_turnover",
+      "epc.waring_pb",
+      "epc.max_storage_percent",
+      "epc.min_leaf_carbon",
+      "epc.resprout_leaf_carbon",
+      "epc.alloc_frootc_leafc",
+      "epc.frootc_crootc")
+
+colnames(p) <- c(p_names)
+evergreen <- inner_join(read_ann, p, by="run")
+
+rs_dat <- read.csv("data/alonzo_data_df.csv")
+rs_dat <- dplyr::filter(rs_dat, fractional_cov > 0.7)
+
+rs_dat2 <- read.csv("data/weighted_tree_summary.csv")
+
+```
+
+We'll first look at the spread of the model output. 
+
+The first pass of filtering results in `r nrow(filt)` parameter sets. 
+
+```{r pft, warning=FALSE, message=FALSE, echo=FALSE}
+
+one <- ggplot(evergreen) + geom_boxplot(aes(y=lai)) + ggtitle("lai")
+two <- ggplot(evergreen) + geom_boxplot(aes(y=plantc)) + ggtitle("plantc")
+three <- ggplot(evergreen) + geom_boxplot(aes(y=height)) + ggtitle("height")
+
+grid.arrange(one, two, three, ncol=3)
+
+ggplot(evergreen) + geom_jitter(aes(x=plantc, y=lai, col=height))
+
+ggplot(filt) + geom_density(aes(x=`2011`, col='11')) + 
+  geom_density(aes(x=`2014`, col='14')) + 
+  geom_density(aes(x=`2017`, col='17'))
+
+```
+
+See how there's two humps in the density plt? the idea is to get the second hump, that actually contains reasonable values of LAI. We can try that by filtering out the starting values in 2011 with plantc and LAI remote sensing estimates. 
+
+```{r quag_filter, warning=F, echo=F}
+
+quag <- dplyr::filter(rs_dat2, class==81) 
+
+filt2 <- evergreen[evergreen$run %in% filt$run,]
+
+filter <- ggplot(quag) +
+  geom_jitter(data=evergreen, aes(x=plantc, y=lai)) +
+  geom_point(aes(x=mean_wt_carb, y=mean_wt_lai, col='mean')) +
+  geom_abline(aes(slope=0, intercept=low_lai, col='low')) +
+  geom_abline(aes(slope=0, intercept=high_lai, col='high')) +
+  geom_vline(aes(xintercept=low_carb, col='low')) +
+  geom_vline(aes(xintercept=high_carb, col='high')) + ggtitle("QUAG")
+
+low_carb <- quag$mean_wt_carb - 2*quag$sd_wt_carb
+high_carb <- quag$mean_wt_carb + 2*quag$sd_wt_carb
+low_lai <- quag$mean_wt_lai - 2*quag$sd_wt_lai
+high_lai <- quag$mean_wt_lai + 2*quag$sd_wt_lai
+
+quag_params2 <- filt2 %>%
+   dplyr::filter(plantc > low_carb & plantc < high_carb) %>%
+  dplyr::filter(lai > low_lai & lai < high_lai)
+
+check_ht <- ggplot() + 
+  geom_boxplot(data=quag_params2, aes(x='model', y=height)) + 
+  geom_abline(data=quag, aes(slope=0, intercept=low_ht, col='lower bound')) + 
+  geom_abline(data=quag, aes(slope=0, intercept=high_ht, col='upper bound')) + 
+  ggtitle("check height output")
+
+quag_full <- rs_dat %>% dplyr::filter(class==81) %>% 
+  dplyr::filter(carbon < 20)
+
+ggplot(quag_params2) + 
+  geom_density(aes(x=height, col='model')) + 
+  geom_density(data=quag_full, aes(x=height, col='data')) + 
+  ggtitle(paste("height (coast live oak n=", nrow(quag_params2),")", sep=""))
+
+ggplot(quag_params2) + 
+  geom_density(aes(x=lai, col='model')) + 
+  geom_density(data=quag_full, aes(x=lai, col='data')) + 
+  ggtitle(paste("LAI (coast live oak n=", nrow(quag_params2),")", sep=""))
+
+ggplot(quag_params2) + 
+  geom_density(aes(x=plantc, col='model')) + 
+  geom_density(data=quag_full, aes(x=carbon, col='data')) + 
+  ggtitle(paste("carbon (coast live oak n=", nrow(quag_params2),")", sep=""))
+
+```
+
+The second pass of filtering results in `r nrow(quag_params2)` parameter sets.
+
+let's explore parameter values. 
+
+```{r params, echo=F}
+lai <- quag_params2
+
+ggplot(lai) + geom_density(aes(x=epc.proj_sla)) + ggtitle("proj_sla")
+
+ggplot(lai) + geom_density(aes(x=epc.leaf_turnover)) + 
+  ggtitle("leaf_turnover")
+
+ggplot(lai) + geom_density(aes(x=epc.gl_smax)) + 
+  ggtitle("gl smax")
+
+ggplot(lai) + geom_density(aes(x=epc.root_growth_direction)) + 
+  ggtitle("root growth direction")
+
+ggplot(lai) + geom_density(aes(x=epc.waring_pa)) + 
+  ggtitle("waring pa")
+
+read_chng2 <- read_chng[read_chng$run %in% quag_params2$run,]
+
+ggplot(read_chng2) + geom_density(aes(x=`2011`, col='11')) +
+  geom_density(aes(x=`2014`, col='14')) + 
+  geom_density(aes(x=`2017`, col='17')) + ggtitle("LAI ann")
+
+diff_plot <- read_chng2 %>% dplyr::select(-change1, -change2) %>% melt(id.vars='run') %>% ggplot() + geom_line(aes(x=as.factor(variable), y=value, col=as.factor(run), group=as.factor(run)), show.legend=F)
+diff_plot + ggtitle("LAI ann differences")
+
+
+pc <- read[read$run %in% quag_params2$run,]
+pc %>% group_by(year, run) %>% 
+  summarize_at(vars(plantc), list(mean)) %>% 
+  dplyr::filter(year > 2009 & year < 2019) %>% 
+  ggplot() + 
+  geom_line(aes(x=year, y=plantc, col=as.factor(run)), show.legend=FALSE) + 
+  ggtitle("plant c all filtered runs")
+
+pc %>% group_by(year, run) %>% 
+  summarize_at(vars(lai), list(mean)) %>% 
+  dplyr::filter(year > 2009 & year < 2019) %>% 
+  ggplot(aes(x=year, y=lai, col=as.factor(run))) + 
+  geom_line(show.legend=F) + 
+  ggtitle("time series LAI all filtered runs")
+
+
+```
+
+
+# write to def file 
+
+3. Create new .def file for each species able to find
+```{r defs, echo=FALSE, eval=FALSE}
+
+quag <- params %>% 
+  dplyr::filter(params$...defs.veg_liveoak.def.group_id %in% quag_params2$run)
+nrow(quag)
+quag$phen = "EVERGREEN"
+quag$species = "quag"
+
+sc <- params %>% 
+  dplyr::filter(params$...defs.veg_liveoak.def.group_id %in% pp_params$run)
+nrow(sc)
+sc$phen = "EVERGREEN"
+sc$species = "scte_scmo"
+
+piun <- params %>% 
+  dplyr::filter(params$...defs.veg_liveoak.def.group_id %in% piun_params$run)
+nrow(piun)
+piun$phen = "EVERGREEN"
+piun$species = "piun"
+
+output = rbind(quag, sc, piun)
+
+# write.csv(output, "../out/RHESSysIOinR_output/allsim_evergreen/all_options_broadleaf_evergreen.csv")
+
+write.csv(quag, "../out/RHESSysIOinR_output/allsim/filtered_quag.csv")
+
+```
+
+
+4. Test new .def file with spinup and run over drought years 2010-2018 
+5. Compare LAI / leafC with David's index data over drought period 2011-2014-2017
