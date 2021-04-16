@@ -1,0 +1,1 @@
+~/RHESSys-develop-edit/bin/rhessys7.0  -t ../tecfiles/tec.target -w ../worldfiles/oak_hill.world -whdr ../worldfiles/oak_hill.hdr -r ../flowtables/oak_hill.flow -st 1947 10 1 1 -ed 2450 8 22 1 -pre ../out/hill/spin -s 0.036294 359.4858 -sv 0.036294 359.4858 -svalt 1.518305 1.785178 -gw 0.346205 0.416299 -vegspinup ../targets/hill_spinup -b -p -c -g -climrepeat 

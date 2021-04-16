@@ -1,0 +1,236 @@
+---
+title: "Sobol_evergreen"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(RHESSysIOinR)
+library(tidyverse)
+library(sensitivity)
+library(reshape2)
+library(lubridate)
+library(zoo)
+
+sobolout <- readRDS("../out/gsi/allsim/jansenoutput_gsi.rds")
+
+source("readin_selected_vars.R")
+```
+
+
+```{r data, include = FALSE}
+ 
+vars = c("psi",
+         "lai",
+         "plantc",
+         "gsi", "vpd")
+read <- readin_selected_vars(dir = "../out/gsi/allsim/", vars) 
+
+read_ann1  <- read %>%  
+  dplyr::filter(year>2008 & year < 2012) %>% 
+  dplyr::filter(month==6 | month==7) %>% 
+  dplyr::group_by(run) %>%
+  dplyr::summarize_at(vars(lai, plantc), funs(mean), na.rm=T)
+
+read_ann <- read %>% group_by(year, run) %>% 
+  summarize_at(vars(plantc, lai), funs(mean)) %>%
+  arrange(run, year) %>%
+  mutate(ma2=rollapply(lai, 5, mean, fill=NA)) %>%
+  mutate(pc2=rollapply(plantc, 5, mean,fill=NA)) %>% 
+  #mutate(ht2=rollapply(height, 5, mean, fill=NA)) %>% 
+  dplyr::filter(year>2000) %>%
+  group_by(run) %>% summarize_at(vars(plantc, lai), funs(mean))
+
+read_drought <- read %>% dplyr::filter(year>2009 & year<2019) %>% dplyr::group_by(year, run) %>% summarize_at(vars(lai, plantc), funs(mean))
+
+params <- read.csv("../out/gsi/allsim/decid.gsi_all_options.csv")
+# select only parameters
+p <- params[, 14:18]
+
+p_names <- c(
+"epc_day_leafon",
+"epc_day_leafoff",
+"epc_ndays_expand",
+"epc_ndays_litfall",
+      "run"
+      )
+
+colnames(p) <- c(p_names)
+sann <- inner_join(read, p, by="run")
+
+fann <- inner_join(read_drought, p, by="run")
+
+```
+
+This is a test run with generic Evergreen def file, and a range of the thresholds that determine the growing season in the drought phenology model. 
+
+This was using `r nrow(sann)` runs. Most of them return a flat LAI value that is either always sensecing or has very little growth, but going to filter out the runs that don't do that and check the ranges of VPD and psi. 
+
+LAI seems to rely on the minimum VPD threshold for the growing season the most, which makes sense. 
+ 
+```{r check, include=FALSE, eval=T}
+# tell for the different outputs
+sens_lai <- sensitivity::tell(sobolout, read_ann$lai)
+#sens_ht <- sensitivity::tell(sobolout, read_ann$height)
+sens_c <- sensitivity::tell(sobolout, read_ann$plantc)
+
+
+p_names2 <- p_names[-5]
+```
+
+```{r timeseries, echo=FALSE, eval=T}
+
+mean <- read %>% group_by(date) %>% 
+  summarize_at(vars(lai, plantc), funs(mean))
+
+stats <- read %>%  
+  dplyr::group_by(date) %>% 
+  dplyr::summarize(
+    lai_first = quantile(lai, probs = c(0.25)), 
+    lai_third = quantile(lai, probs = c(0.75)),
+    pc_first = quantile(plantc, probs = c(0.25)), 
+    pc_third = quantile(plantc, probs = c(0.75)))
+    # rd_first = quantile(cpool, probs = c(0.25)), 
+    # rd_third = quantile(cpool, probs = c(0.75)))
+
+## plot
+ggplot(read) + geom_line(aes(x=date, y=lai), col='grey', alpha=0.5) + 
+  geom_line(data=mean, aes(x=date, y=lai), col='red') + 
+  geom_line(data=stats, aes(x=date, y=lai_first, group=1), col='blue', linetype='dashed') +
+  geom_line(data=stats, aes(x=date, y=lai_third, group=1), col='blue', linetype='dashed')
+
+ggplot(read) + geom_line(aes(x=date, y=plantc), col='grey', alpha=0.5) + 
+  geom_line(data=mean, aes(x=date, y=plantc), col='red') + 
+  geom_line(data=stats, aes(x=date, y=pc_first, group=1), col='blue', linetype='dashed') +
+  geom_line(data=stats, aes(x=date, y=pc_third, group=1), col='blue', linetype='dashed')
+
+# ggplot(read) + geom_line(aes(x=date, y=height), col='grey', alpha=0.5) + 
+#   geom_line(data=mean, aes(x=date, y=height), col='red') + 
+#   geom_line(data=stats, aes(x=date, y=ht_first, group=1), col='blue', linetype='dashed') +
+#   geom_line(data=stats, aes(x=date, y=ht_third, group=1), col='blue', linetype='dashed')
+  
+# ggplot(read) + geom_line(aes(x=date, y=cpool), col='grey', alpha=0.5) + 
+#   geom_line(data=mean, aes(x=date, y=cpool), col='red') + 
+#   geom_line(data=stats, aes(x=date, y=rd_first, group=1), col='blue', linetype='dashed') +
+#   geom_line(data=stats, aes(x=date, y=rd_third, group=1), col='blue', linetype='dashed')
+
+
+
+```
+
+
+```{r ranks, echo=FALSE, eval=T}
+lai_S <- ggplot(sens_lai$S) +
+  geom_col(aes(y=original, x=p_names2, fill=original),position="dodge") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("first order rank LAI") +
+  coord_flip()
+
+lai_T <- ggplot(sens_lai$T) +
+  geom_col(aes(y=original, x=p_names2, fill=original),position="dodge") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("total rank LAI") + coord_flip()
+
+lai_S
+lai_T
+
+
+# ht_S <- ggplot(sens_ht$S) +
+#   geom_col(aes(y=original, x=p_names2, fill=original),position="dodge") + 
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+#   scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("first order rank height") + coord_flip()
+# 
+# ht_T <- ggplot(sens_ht$T) +
+#   geom_col(aes(y=original, x=p_names2, fill=original),position="dodge") + 
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+#   scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("total rank height") + coord_flip()
+# 
+# ht_S
+# ht_T
+
+carb_S <- ggplot(sens_c$S) +
+  geom_col(aes(y=original, x=p_names2, fill=original),position="dodge") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("first order rank plantC") + coord_flip()
+
+carb_T <- ggplot(sens_c$T) +
+  geom_col(aes(y=original, x=p_names2, fill=original),position="dodge") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("total rank plantC") + coord_flip()
+
+carb_S
+carb_T
+
+```
+
+
+combine output and look at individual params
+```{r scatter, echo=FALSE, eval=F}
+
+ggplot(sann) + geom_boxplot(aes(y=lai)) + ggtitle("avg ann lai")
+
+
+ggplot(sann) + 
+  geom_jitter(aes(x=plantc, y=lai, col=epc.gs_vpd_min)) + ggtitle("epc.gs_vpd_min")
+
+ggplot(sann) + 
+  geom_jitter(aes(x=plantc, y=lai, col=epc.gs_psi_max)) + ggtitle("gs_npp_slp")
+
+ggplot(sann) + 
+  geom_jitter(aes(x=plantc, y=lai, col=epc.gs_psi_min)) + ggtitle("gs_npp_int")
+
+
+```
+
+trying to filter out which runs actually show seasonal LAI. 
+
+```{r seasons}
+
+read_filt <- read %>% 
+  group_by(month, run) %>% summarize_at(vars(lai), funs(max))
+
+ggplot(read_filt) + geom_boxplot(aes(x=as.factor(month), y=lai)) + 
+  ggtitle("max monthly LAI")
+
+read_mo <- dcast(read_filt, run ~ month, value.var='lai', .fun=mean) %>% 
+  dplyr::filter(`6` < `1` & `6` < `10`)
+
+read_mo_melt <- melt(read_mo, id.vars = 'run', variable.name = 'month', value.name = 'lai')
+ggplot(read_mo_melt) + geom_boxplot(aes(x=as.factor(month), y=lai))
+
+read2 <- read[read$run %in% read_mo_melt$run,]
+
+ggplot(read2) + geom_line(aes(x=date, y=lai, col=as.factor(run)), show.legend = F)
+
+rd_wy <- mkdate(sann)
+rd_wysum <- rd_wy %>% group_by(wyd, run) %>% summarize_at(vars(lai, plantc, vpd, gsi, psi, epc_day_leafoff, epc_day_leafon), funs(max))
+
+ggplot(rd_wysum) + geom_line(aes(x=month, y=lai, col=as.factor(run)), show.legend=F) 
+#  geom_vline(aes(xintercept=150)) + 
+#  geom_vline(aes(xintercept=210)) 
+
+ggplot(rd_wysum) + geom_line(aes(x=month, y=vpd, col=as.factor(run)), show.legend=F)
+ggplot(rd_wysum) + geom_line(aes(x=month, y=psi, col=as.factor(run)), show.legend=F)
+ggplot(rd_wysum) + geom_line(aes(x=month, y=gsi, col=as.factor(run)), show.legend=F) + 
+  geom_vline(aes(xintercept=273)) 
+
+
+#### filter out which have the largest value in january or dec
+filt_rd <- rd_wy %>% group_by(month, run) %>% summarize_at(vars(lai, epc_day_leafoff, epc_day_leafon, epc_ndays_expand, epc_ndays_litfall), funs(mean))
+
+filt_rd_max <- filt_rd %>% group_by(run) %>%
+  dplyr::filter(lai == max(lai)) %>% 
+  dplyr::filter(month==1 | month==12)
+
+toplot <- filt_rd[filt_rd$run %in% filt_rd_max$run,] 
+ggplot(toplot) + geom_line(aes(x=month, y=lai, col=as.factor(run)), show.legend = F)
+
+ggplot(filt_rd_max) + geom_density(aes(x=epc_day_leafon))
+ggplot(filt_rd_max) + geom_density(aes(x=epc_day_leafoff))
+ggplot(filt_rd_max) + geom_density(aes(x=epc_ndays_litfall))
+ggplot(filt_rd_max) + geom_density(aes(x=epc_ndays_expand))
+
+```
+
+
+

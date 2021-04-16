@@ -1,0 +1,369 @@
+---
+title: "Sobol_decid"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(RHESSysIOinR)
+library(tidyverse)
+library(sensitivity)
+library(reshape2)
+library(zoo)
+library(lubridate)
+library(data.table)
+
+sobolout <- readRDS("../../out/decid/allsim/jansenoutput_decid.rds")
+source("../../R/readin_selected_vars.R")
+```
+
+#### plot density of LAI values across years
+
+```{r data, echo=F}
+ 
+vars = c("lai", "plantc", "height")
+
+read <- readin_selected_vars(dir = "../../out/decid/allsim", vars)
+
+#read_lmf <- read %>%
+  # mutate(lmf=(leafc+dead_leafc+leafc_store)/1000/plantc) %>% 
+  # dplyr::filter(year> 2008 & year<2012) %>% 
+  # group_by(run) %>% 
+  # summarize_at(vars(lmf), list(mean))
+
+#ggplot(read_lmf) + geom_boxplot(aes(x=lmf))
+
+ read_yr <- read %>%
+   dplyr::filter(year==2011 | year==2014 | year==2017) %>%
+   dplyr::filter(month==6 | month==7) %>%
+   reshape2::dcast(run ~ year, value.var='lai', mean) %>%
+   mutate(change1 = (`2011`-`2014`)/`2011`) %>%
+   mutate(change2 = (`2011`-`2017`)/`2011`)
+
+ ggplot(read_yr) + geom_density(aes(x=`2011`, col='11 lai')) +
+   geom_density(aes(x=`2014`, col='14 lai')) +
+   geom_density(aes(x=`2017`, col='17 lai'))
+
+read_lai <- read %>% 
+  dplyr::filter(year> 2008 & year<2012) %>% 
+  dplyr::filter(month==6 | month==7) %>% 
+  group_by(run) %>% 
+  summarize_at(vars(lai, plantc, height), funs(mean))
+
+ read_yr <- read %>%
+   dplyr::filter(year==2011 | year==2014 | year==2017) %>%
+   dplyr::filter(month==6 | month==7) %>%
+   reshape2::dcast(run ~ year, value.var='lai', mean) %>%
+   mutate(resil = `2017`/`2011`)
+read_yr$resil[is.na(read_yr$resil)] <- 0
+read_yr$resil[is.infinite(read_yr$resil)] <- 0
+  
+params <- read.csv("../../out/decid/allsim/veg.decid_all_options.csv")
+# select only parameters
+p <- params[,14:53]
+
+p_names <- c(
+      "pore_size_index",
+      "psi_air_entry",
+      "run",
+       "epc.leaf_cn",
+       "epc.branch_turnover",
+       "epc.gl_smax",
+       "epc.flnr_age_mult",
+       "epc.litter_moist_coef",
+       "epc.psi_close",
+       "mrc.q10",
+       "epc.vpd_close",
+       "epc.leaf_turnover",
+       "epc.froot_turnover",
+       "epc.storage_transfer_prop",
+       "epc.height_to_stem_coef",
+       "epc.waring_pa",
+        "epc.root_distrib_parm",
+       "epc.proj_sla",
+       "epc.alloc_stemc_leafc",
+       "epc.ext_coef",
+       "specific_rain_capacity",
+       "epc.flnr_sunlit",
+       "epc.flnr_shade",
+       "epc.netpabs_sunlit",
+       "epc.netpabs_shade",
+       "epc.netpabs_age_mult",
+       "epc.cpool_mort_fract",
+       "epc.min_percent_leafg",
+      "epc.livewood_turnover",
+      "epc.waring_pb",
+      "epc.max_storage_percent",
+      "epc.min_leaf_carbon",
+      "epc.resprout_leaf_carbon",
+      "epc.alloc_frootc_leafc",
+      "epc.frootc_crootc",
+      "epc.alloc_prop_day_growth",
+      "epc.day_leafon",
+      "epc.day_leafoff",
+      "epc.ndays_expand",
+      "epc.ndays_litfall"
+      )
+
+colnames(p) <- c(p_names)
+sann <- inner_join(read_lai, p, by="run")
+
+```
+
+I like to start with these density plots - really showing the distribution of outcomes for the different parameter sets (n=1064). I started with this small value because it runs faster to compile these plots and get an idea of if there are any differences. This plot tells me there are a solid set of runs that included reasonable LAI for all three years, but not that there was recovery by 2017.  
+
+To compare how much each parameter set changes from 2011-2017, I plotted those against each other. Almost every run has a greater value in 2011. 
+
+I also took the running mean, for every 5 years, and plotted that for the entire output (2005-2025), shown below. There is a general downward trend for both LAI and plant C from the start.
+
+
+#### plot running mean, and filter out based on LAI values in 2011
+```{r changes }
+ 
+# ggplot(sann) + geom_jitter(aes(x=`2011`, y=`2017`, col=change1)) + geom_abline(intercept=0, slope=1) + 
+#   coord_fixed()
+
+data =  read.csv("~/Google Drive/My Drive/patches/R/data/weighted_tree_summary.csv")
+quag <- data[data$class == 34,]
+low_lai <- quag$mean_wt_lai - 2*quag$sd_wt_lai
+high_lai <- quag$mean_wt_lai + 2*quag$sd_wt_lai
+low_carb <- quag$mean_wt_carb - 2*quag$sd_wt_carb
+high_carb <- quag$mean_wt_carb + 2*quag$sd_wt_carb
+
+test2 <- read %>% group_by(year, run) %>% 
+  summarize_at(vars(plantc, lai), list(mean)) %>%
+  arrange(run, year) %>%
+  mutate(ma2=rollapply(lai, 5, mean, fill=NA)) %>%
+  mutate(pc2=rollapply(plantc, 5, mean,fill=NA))
+
+running_lai <- test2 %>% dplyr::filter(year > 2000) %>%
+  ggplot(aes(x=year, y=ma2, col=as.factor(run))) +
+  geom_line(show.legend=F) +
+  geom_hline(aes(yintercept=low_lai)) +
+  geom_hline(aes(yintercept=high_lai)) +
+  ggtitle("running average LAI")
+
+running_plantc <- test2 %>% dplyr::filter(year > 2000) %>%
+  ggplot(aes(x=year, y=pc2, col=as.factor(run))) +
+  geom_line(show.legend=F) +
+  geom_hline(aes(yintercept=low_carb)) +
+  geom_hline(aes(yintercept=high_carb)) + 
+  ggtitle("runnin average plant C")
+running_lai
+running_plantc
+
+filr2 <- test2 %>% dplyr::filter(year == 2011) %>%
+  dplyr::filter(ma2 > low_lai & ma2 < high_lai &
+                  lai > low_lai & lai < high_lai)
+
+filr2 <- inner_join(filr2, p, by='run')
+
+# ggplot(sann) + geom_density(aes(x=epc.branch_turnover)) +  geom_density(data=filr2, aes(x=epc.branch_turnover, col='filtered'))
+# 
+# ggplot(sann) + geom_density(aes(x=epc.min_percent_leafg)) +
+#   geom_density(data=filr2, aes(x=epc.min_percent_leafg, col='filtered'))
+# 
+# ggplot(sann) + geom_density(aes(x=epc.waring_pa)) + 
+#   geom_density(data=filr2, aes(x=epc.waring_pa, col='filtered'))
+# 
+# ggplot(sann) + geom_density(aes(x=epc.proj_sla)) + 
+#   geom_density(data=filr2, aes(x=epc.proj_sla, col='filtered'))
+
+```
+
+
+```{r check, include=FALSE}
+# tell for the different outputs
+
+#sens_lai <- sensitivity::tell(sobolout, read_ann$change)
+sens_ht <- sensitivity::tell(sobolout, read_lai$height)
+sens_c <- sensitivity::tell(sobolout, read_lai$plantc)
+sens_lai <- sensitivity::tell(sobolout, read_lai$lai)
+sens_res <- sensitivity::tell(sobolout, read_yr$resil)
+
+p_names2 <- p_names[-3]
+```
+
+these parameters were selected based on the sensitivity plots below. 
+
+
+#### plot time series of LAI
+
+rather than aggregated, this plot is daily values. The red line is the mean, and blue lines are first and third quartiles. 
+```{r timeseries, echo=FALSE, message=F, warning=F, eval=F}
+meann <- read %>% 
+  #dplyr::filter(year>2010 & year <2019) %>%
+  group_by(date) %>% 
+  summarize_at(vars(lai), funs(mean))
+
+stats <- read %>%  
+  #dplyr::filter(year>2010 & year <2019) %>%
+  dplyr::group_by(date) %>% 
+  dplyr::summarize(
+    lai_first = quantile(lai, probs = c(0.25)), 
+    lai_third = quantile(lai, probs = c(0.75)))
+   
+
+## plot
+read %>% 
+  #dplyr::filter(year>2010 & year <2019) %>%
+  ggplot() + 
+  geom_line(aes(x=date, y=lai), col='grey', alpha=0.5) + 
+  geom_line(data=meann, aes(x=date, y=lai), col='red') + 
+  geom_line(data=stats, aes(x=date, y=lai_first, group=1), col='blue', linetype='dashed') +
+  geom_line(data=stats, aes(x=date, y=lai_third, group=1), col='blue', linetype='dashed')
+
+```
+
+#### sensitivity of 2011 LAI compared to 2017 LAI
+
+I've been checking the LAI for these two years separately, to see if there is some parameter that matters more for the drought years leading up to 2017. Before your updates, epc.litter_moist_coef usually was high, not sure if that had to do with the litter and decomposition tht you changed. But these look pretty similar, which is a good thing! 
+
+
+```{r ranks, echo=FALSE}
+lai_S <- sens_lai$S %>%
+  mutate(params = rownames(sens_lai$S)) %>%
+  dplyr::filter(is.finite(original) & params!='epc.litter_moist_coef') %>%
+  ggplot() +
+  geom_col(aes(y=original, x=params, fill=original),position="dodge", na.rm = T) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("first order rank LAI") +
+  coord_flip()
+
+lai_T <- sens_lai$T %>%
+  mutate(params = rownames(sens_lai$S)) %>%
+  dplyr::filter(is.finite(original) & params!='epc.litter_moist_coef') %>%
+  ggplot() +
+  geom_col(aes(y=original, x=params, fill=original),position="dodge") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("total rank LAI") + coord_flip()
+lai_S
+lai_T
+
+
+ht_S <- sens_ht$S %>% 
+  mutate(params = rownames(sens_ht$S)) %>%
+  ggplot() +
+  geom_col(aes(y=original, x=params, fill=original),position="dodge") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("first order rank height") + coord_flip()
+
+ht_T <- sens_ht$T %>% 
+  mutate(params = rownames(sens_ht$T)) %>%
+  ggplot() +
+  geom_col(aes(y=original, x=params, fill=original),position="dodge") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("total rank height") + coord_flip()
+
+ht_S
+ht_T
+
+carb_S <- sens_c$S %>% 
+  mutate(params = rownames(sens_c$S)) %>%
+  ggplot() +
+  geom_col(aes(y=original, x=params, fill=original),position="dodge") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("first order rank plantc") + coord_flip() 
+
+carb_T <- sens_c$T %>% 
+  mutate(params = rownames(sens_c$T)) %>%
+  ggplot() +
+  geom_col(aes(y=original, x=params, fill=original),position="dodge") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("total rank plantc") + coord_flip()
+
+carb_S
+carb_T
+
+res_S <- sens_res$S %>% 
+  mutate(params = rownames(sens_res$S)) %>%
+  ggplot() +
+  geom_col(aes(y=original, x=params, fill=original),position="dodge") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("first order rank resilience") + coord_flip() 
+
+res_T <- sens_res$T %>% 
+  mutate(params = rownames(sens_res$T)) %>%
+  ggplot() +
+  geom_col(aes(y=original, x=params, fill=original),position="dodge") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_gradient2(low='firebrick', mid='snow3', high='slateblue') + ggtitle("total rank resilience") + coord_flip()
+
+res_S
+res_T
+
+```
+
+### compare range of RHESSys model output with mean values from data 
+
+finally, just plotting the distribution of the model output LAI in 2011 with the RS data. The model is underestimating LAI a bit. But overestimating plant carbon and height.
+
+```{r rsdata, echo=FALSE, message=F, warning=F, eval=F}
+rs_dat1 <- read.csv("data/rs_data_df.csv")
+rs_dat2 <- read.csv("data/weighted_tree_summary.csv")
+
+# model <- read_lai %>% dplyr::select(lai) %>% 
+#   melt()
+
+obs <- rs_dat1 %>% dplyr::select(lai = lai,
+                          height = height,
+                          plantc = carbperarea) %>% 
+  melt() 
+
+# mod <- ggplot(model) + geom_histogram(aes(x=value, fill=variable), position='dodge') +
+#   scale_x_continuous(limits=c(0,20))
+  
+obsplot <- ggplot(obs) + geom_histogram(aes(x=value, fill=variable), position='dodge') +
+  scale_x_continuous(limits=c(0,20))
+
+lai <- ggplot() +
+  geom_histogram(data=read_lai, aes(x=lai, fill="model")) +
+  geom_histogram(data=rs_dat1, aes(x=lai, col="obs"),alpha=0.5)
+lai + ggtitle("LAI")
+
+pc <- ggplot() +
+  geom_histogram(data=read_lai, aes(x=plantc, fill="model")) +
+  geom_histogram(data=rs_dat1, aes(x=carbperarea, col="obs"),alpha=0.5)
+pc + ggtitle("plantC")
+
+ht <- ggplot() +
+  geom_histogram(data=read_lai, aes(x=plantc, fill="model")) +
+  geom_histogram(data=rs_dat1, aes(x=height, col="obs"),alpha=0.5)
+ht  + ggtitle("height")
+
+```
+
+
+combine output and look at individual params
+```{r scatter, echo=FALSE, eval=F}
+
+
+alloc <- ggplot(sann) + 
+  geom_jitter(aes(x=`2011`, y=`2017`, col=epc.alloc_stemc_leafc))
+alloc 
+
+lmc <- ggplot(sann) + 
+  geom_jitter(aes(x=`2011`, y=`2017`, col=epc.waring_pa)) + geom_abline(aes(intercept=0, slope=1))
+lmc
+
+ggplot(sann) + geom_jitter(aes(x=`2011`, y=`2017`, col=epc.leaf_turnover))
+
+turnover <- ggplot(sann) + 
+  geom_jitter(aes(x=`2011`, y=`2017`, col=epc.leaf_cn))
+turnover 
+
+sla <- ggplot(sann) + 
+  geom_jitter(aes(x=`2011`, y=`2017`, col=epc.proj_sla))
+sla 
+
+ggplot(sann) + 
+  geom_jitter(aes(x=`2011`, y=`2017`, col=epc.gl_smax))
+
+ggplot(sann) + 
+  geom_jitter(aes(x=`2011`, y=`2017`, col=epc.root_growth_direction))
+
+# ggplot(sann) + 
+#   geom_jitter(aes(x=`2011`, y=`2017`, col=nitrif_parm_smax))
+```
+
+

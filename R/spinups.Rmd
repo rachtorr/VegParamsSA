@@ -1,0 +1,365 @@
+---
+title: "evergreen spinups"
+output: html_document
+---
+
+```{r setup, include=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(RHESSysIOinR)
+library(tidyverse)
+library(reshape2)
+library(lubridate)
+setwd("~/Documents/patches/out/")
+source("../R/readin_selected_vars.R")
+
+```
+
+### Looking at how different amounts of spin up years affects the subsequent years that include drought (2011-2018)
+
++ species is Quercus agrifolia
++ years of spinup include: 50, 65, 70, 100, 200
++ beginning date: 1947 10 1 1
++ dates of model output: 2010 9 30 1 - 2018 10 1 1
++ actual climate data is 1947 - 2018, and the spinups past those dates were ran with climrepeat
++ number of runs = 269
+
+#### Look at rainfall data being used real quick
+```{r clim, echo=FALSE}
+clim <- read.csv("../clim/sb_mc_daily.rain")
+dates <- seq.Date(from=as.Date("1920-10-1"), by="day", length.out = 35879)
+clim$date = dates
+colnames(clim) <- c("precip", "date")
+ann_p <- clim %>% group_by(year(date)) %>% summarize_at(vars(precip), list(sum)) 
+
+
+### create loop to 100 years 
+climrepeat <- as.data.frame(seq.Date(from=as.Date("1920-10-1"), by="day", to=as.Date("2120-10-1")))
+climrepeat$precip <- rep(clim$precip, length.out=nrow(climrepeat))
+colnames(climrepeat) <- c("date","precip")
+climrepeat$year <- year(climrepeat$date)
+climplot <- climrepeat %>% group_by(year) %>% 
+  summarize_at(vars(precip), list(sum)) %>% 
+  ggplot() + geom_col(aes(x=year, y=precip))
+
+mean_p <- climrepeat %>% group_by(year) %>% summarize_at(vars(precip), list(sum))
+mean_p_line = mean(mean_p$precip, na.omit=T)
+
+### viz when spinup stopped 
+
+climplot + geom_vline(aes(xintercept=1970, col='50')) +
+  geom_vline(aes(xintercept=1985, col='65')) + 
+  geom_vline(aes(xintercept=1990, col='70')) +
+  geom_vline(aes(xintercept=2020, col='100')) +
+  geom_vline(aes(xintercept=2120, col='200')) + 
+  ggtitle("precip [m] (repeated 1920-2120) and model spinup output years") +
+  geom_hline(aes(yintercept=mean_p_line), linetype='dashed')
+```
+
+
+```{r vars, echo=FALSE, message=FALSE}
+#### Load in data from the different outputs 
+v = c("plantc", "height", "lai")
+
+fifty <- readin_selected_vars(vars = v, dir="../out/RHESSysIOinR_output/spinup50/allsim") 
+
+sixtyfive <- readin_selected_vars(dir="../out/RHESSysIOinR_output/spinup65/allsim", vars = v)
+
+seventy <- readin_selected_vars("../out/RHESSysIOinR_output/spinup70/allsim", vars = v)
+
+eighty <- readin_selected_vars("../out/RHESSysIOinR_output/spinup80/allsim", vars = v)
+
+hundo <- readin_selected_vars("../out/RHESSysIOinR_output/spinup100/allsim", vars = v)
+```
+
+#### Look at all runs averaged by day
+```{r dates, echo=FALSE}
+
+run_fifty <- fifty %>% group_by(run) %>% 
+  summarize_at(vars(height, plantc, lai), funs(mean))
+run_sixtyfive <- sixtyfive %>% group_by(run) %>% 
+  summarize_at(vars(height, plantc, lai), funs(mean))
+run_seventy <- seventy %>% group_by(run) %>% 
+  summarize_at(vars(height, plantc, lai), funs(mean))
+run_eighty <- eighty %>% group_by(run) %>% 
+  summarize_at(vars(height, plantc, lai), funs(mean))
+run_hundo <- hundo %>% group_by(run) %>% 
+  summarize_at(vars(height, plantc, lai), funs(mean))
+
+ggplot() + 
+  geom_boxplot(data=run_fifty, aes(x="50", y=lai, fill='50')) + 
+  geom_boxplot(data=run_sixtyfive, aes(x="65", y=lai, fill='65')) + 
+  geom_boxplot(data=run_seventy, aes(x="70", y=lai, fill='70')) + 
+  geom_boxplot(data=run_eighty, aes(x="100", y=lai, fill='100')) + 
+  geom_boxplot(data=run_hundo, aes(x="200", y=lai, fill='200'))
+
+ggplot() + 
+  geom_boxplot(data=run_fifty, aes(x="50", y=plantc, fill='50')) + 
+  geom_boxplot(data=run_sixtyfive, aes(x="65", y=plantc, fill='65')) + 
+  geom_boxplot(data=run_seventy, aes(x="70", y=plantc, fill='70')) + 
+  geom_boxplot(data=run_eighty, aes(x="100", y=plantc, fill='100')) + 
+  geom_boxplot(data=run_hundo, aes(x="200", y=plantc, fill='200'))
+
+
+datefifty <- fifty %>% group_by(date) %>% 
+  summarize_at(vars(lai, plantc), funs(mean))
+
+datesixty <- sixtyfive %>% group_by(date)  %>%
+  summarize_at(vars(lai, plantc), funs(mean))
+
+dateseven <- seventy %>% group_by(date)  %>%
+  summarize_at(vars(lai, plantc), funs(mean))
+
+dateeighty <- eighty %>% group_by(date) %>%
+  summarize_at(vars(lai, plantc), funs(mean))
+
+datehun <- hundo %>% group_by(date) %>% 
+  summarize_at(vars(lai, plantc), funs(mean))
+
+### make some plots 
+mean_lai <- ggplot() + 
+  geom_line(data=datefifty, aes(x=date, y=lai, col='50')) + 
+  geom_line(data=datesixty, aes(x=date, y=lai, col='65')) + 
+  geom_line(data=dateseven, aes(x=date, y=lai, col='70')) +
+  geom_line(data=dateeighty, aes(x=date, y=lai, col='100')) +
+  geom_line(data=datehun, aes(x=date, y=lai, col='200')) + ggtitle("Avg daily LAI")
+mean_lai
+
+# max_lai <- ggplot() + 
+#   geom_line(data=datefifty, aes(x=date, y=lai_max, col='50')) + 
+#   geom_line(data=datesixty, aes(x=date, y=lai_max, col='65')) + 
+#   geom_line(data=dateseven, aes(x=date, y=lai_max, col='70')) +
+#   geom_line(data=dateeighty, aes(x=date, y=lai_max, col='80')) +
+#   geom_line(data=datehun, aes(x=date, y=lai_max, col='100')) + ggtitle("Max daily LAI")
+
+
+mean_plantc <- ggplot() + geom_line(data=datefifty, aes(x=date, y=plantc, col='50')) + 
+  geom_line(data=datesixty, aes(x=date, y=plantc, col='65')) + 
+  geom_line(data=dateseven, aes(x=date, y=plantc, col='70')) +
+  geom_line(data=dateeighty, aes(x=date, y=plantc, col='100')) +
+  geom_line(data=datehun, aes(x=date, y=plantc, col='200')) + ggtitle("Avg daily plantC")
+mean_plantc
+
+# max_plantc <- ggplot() + geom_line(data=datefifty, aes(x=date, y=plantc_max, col='50')) + 
+#   geom_line(data=datesixty, aes(x=date, y=plantc_max, col='65')) + 
+#   geom_line(data=dateseven, aes(x=date, y=plantc_max, col='70')) +
+#   geom_line(data=dateeighty, aes(x=date, y=plantc_max, col='80')) +
+#   geom_line(data=datehun, aes(x=date, y=plantc_max, col='100')) + ggtitle("Max daily plantC")
+
+
+### group by year 
+splt_dte <- str_split(fifty$date, pattern="-")
+
+fifty$year = as.numeric(lapply(splt_dte, "[[",1))
+sixtyfive$year = as.numeric(lapply(splt_dte, "[[",1))
+seventy$year = as.numeric(lapply(splt_dte, "[[",1))
+eighty$year = as.numeric(lapply(splt_dte, "[[",1))
+hundo$year = as.numeric(lapply(splt_dte, "[[",1))
+
+run_fifty <- fifty %>% dplyr::select(-date, - variable) %>% 
+  dplyr::filter(year==2011 | year==2014 | year==2017) %>%
+  group_by(run, year) %>% 
+  summarize_at(vars(lai), list(mean))
+
+run_sixtyfive <- sixtyfive %>% dplyr::select(-date, - variable) %>%
+  dplyr::filter(year==2011 | year==2014 | year==2017) %>%
+  group_by(run, year) %>% 
+  summarize_at(vars(lai), list(mean))
+
+run_seventy <- seventy %>% dplyr::select(-date, - variable) %>%
+  dplyr::filter(year==2011 | year==2014 | year==2017) %>%
+  group_by(run, year) %>% 
+  summarize_at(vars(lai), list(mean))
+
+run_eighty <- eighty %>% dplyr::select(-date, - variable) %>%
+  dplyr::filter(year==2011 | year==2014 | year==2017) %>%
+  group_by(run, year) %>% 
+  summarize_at(vars(lai), list(mean))
+
+run_hundo <- hundo %>% dplyr::select(-date, - variable) %>%
+  dplyr::filter(year==2011 | year==2014 | year==2017) %>%
+  group_by(run, year) %>% 
+  summarize_at(vars(lai), list(mean))
+
+ggplot() + 
+  geom_boxplot(data=run_fifty, aes(fill=as.factor(year), y=lai, x='50')) +
+  geom_boxplot(data=run_sixtyfive, aes(fill=as.factor(year), y=lai, x='65')) +
+  geom_boxplot(data=run_seventy, aes(fill=as.factor(year), y=lai, x='70')) + 
+  geom_boxplot(data=run_eighty, aes(fill=as.factor(year), y=lai, x='100')) +
+  geom_boxplot(data=run_hundo, aes(fill=as.factor(year), y=lai, x='200')) + 
+  ggtitle("avg daily LAI across simulations")
+
+
+```
+
+#### Use average (across runs) from june / july each year  
+```{r jj, echo=F}
+fifty_jj <- fifty %>% dplyr::select(-date, - variable) %>%
+  dplyr::filter(month==6 | month==7) %>% 
+  group_by(year) %>% 
+  summarize_all(list(mean))
+
+sixtyfive_jj <- sixtyfive %>% dplyr::select(-date, - variable) %>%
+  dplyr::filter(month==6 | month==7) %>% 
+  group_by(year) %>% 
+  summarize_all(list(mean))
+
+seventy_jj <- seventy %>% dplyr::select(-date, - variable) %>%
+  dplyr::filter(month==6 | month==7) %>% 
+  group_by(year) %>% 
+  summarize_all(list(mean))
+
+eighty_jj <- eighty %>% dplyr::select(-date, - variable) %>%
+  dplyr::filter(month==6 | month==7) %>% 
+  group_by(year) %>% 
+  summarize_all(list(mean))
+
+hun_jj <- hundo %>% dplyr::select(-date, - variable) %>%
+  dplyr::filter(month==6 | month==7) %>% 
+  group_by(year) %>% 
+  summarize_all(list(mean))
+
+jj_lai <- ggplot() +
+  geom_line(data=fifty_jj, aes(x=year, y=lai, col='50')) +
+  geom_line(data=sixtyfive_jj, aes(x=year, y=lai, col='65')) +
+  geom_line(data=seventy_jj, aes(x=year, y=lai, col='70')) +
+  geom_line(data=eighty_jj, aes(x=year, y=lai, col='100')) +
+  geom_line(data=hun_jj, aes(x=year, y=lai, col='200')) +
+  ggtitle("avg june/july LAI")
+
+#####################################
+
+fifty_jj2 <- fifty %>% dplyr::select(-date, - variable) %>%
+  dplyr::filter(month==6 | month==7) %>% 
+  dplyr::filter(year==2011 | year==2014 | year==2017) %>%
+  group_by(year, run) %>% 
+  summarize_all(list(mean))
+
+sixtyfive_jj2 <- sixtyfive %>% dplyr::select(-date, - variable) %>%
+  dplyr::filter(month==6 | month==7) %>% 
+  dplyr::filter(year==2011 | year==2014 | year==2017) %>%
+  group_by(year, run) %>% 
+  summarize_all(list(mean))
+
+seventy_jj2 <- seventy %>% dplyr::select(-date, - variable) %>%
+  dplyr::filter(month==6 | month==7) %>% 
+  dplyr::filter(year==2011 | year==2014 | year==2017) %>%
+  group_by(year, run) %>% 
+  summarize_all(list(mean))
+
+eighty_jj2 <- eighty %>% dplyr::select(-date, - variable) %>%
+  dplyr::filter(month==6 | month==7) %>% 
+  dplyr::filter(year==2011 | year==2014 | year==2017) %>%
+  group_by(year, run) %>% 
+  summarize_all(list(mean))
+
+hun_jj2 <- hundo %>% dplyr::select(-date, - variable) %>%
+  dplyr::filter(month==6 | month==7) %>% 
+  dplyr::filter(year==2011 | year==2014 | year==2017) %>%
+  group_by(year, run) %>% 
+  summarize_all(list(mean))
+
+jj_boxes <- ggplot() + 
+  geom_boxplot(data=fifty_jj2, aes(fill=as.factor(year), y=lai, x='50')) +
+  geom_boxplot(data=sixtyfive_jj2, aes(fill=as.factor(year), y=lai, x='65')) +
+  geom_boxplot(data=seventy_jj2, aes(fill=as.factor(year), y=lai, x='70')) + 
+  geom_boxplot(data=eighty_jj2, aes(fill=as.factor(year), y=lai, x='100')) +
+  geom_boxplot(data=hun_jj2, aes(fill=as.factor(year), y=lai, x='200')) + 
+  ggtitle("avg June/July LAI across simulations")
+
+
+mean_lai
+jj_lai
+jj_boxes
+
+#####################################
+jj_plantc <- ggplot() +
+  geom_line(data=fifty_jj, aes(x=year, y=plantc, col='50')) +
+  geom_line(data=sixtyfive_jj, aes(x=year, y=plantc, col='65')) +
+  geom_line(data=seventy_jj, aes(x=year, y=plantc, col='70')) +
+  geom_line(data=eighty_jj, aes(x=year, y=plantc, col='100')) +
+  geom_line(data=hun_jj, aes(x=year, y=plantc, col='200')) +
+  ggtitle("avg june/july plant C")
+
+
+jj_boxes_pc <- ggplot() + 
+  geom_boxplot(data=fifty_jj2, aes(fill=as.factor(year), y=plantc, x='50')) +
+  geom_boxplot(data=sixtyfive_jj2, aes(fill=as.factor(year), y=plantc, x='65')) +
+  geom_boxplot(data=seventy_jj2, aes(fill=as.factor(year), y=plantc, x='70')) + 
+  geom_boxplot(data=eighty_jj2, aes(fill=as.factor(year), y=plantc, x='100')) +
+  geom_boxplot(data=hun_jj2, aes(fill=as.factor(year), y=plantc, x='200')) + 
+  ggtitle("avg june/july plantC across simulations")
+
+mean_plantc 
+jj_plantc
+jj_boxes_pc
+
+```
+
+```{r spei}
+clim <- read.csv("/Volumes/GoogleDrive/My Drive/clim_files/sb_all_clim_UPDATED.csv")
+clim$date <- as.Date(clim$cal)
+
+pre <- clim %>% 
+  #dplyr::filter(year > 1948 & year< 2018) %>% 
+  mutate(rain_mm = p*1000) %>% 
+  group_by(year(date), month(date)) %>% 
+  summarize_at(vars(rain_mm), funs(sum)) 
+
+tave <- clim %>% mutate(tmid = (tmax+tmin)/2) %>% 
+  #dplyr::filter(year>1948 & year<2018) %>%
+  group_by(year(date), month(date)) %>% 
+  summarize_at(vars(tmid), funs(mean))
+
+pet.thorn <- SPEI::thornthwaite(Tave = tave$tmid, lat=34.42, na.rm=F)
+
+bal0 = pre$rain_mm - pet.thorn
+
+spei.thor <- SPEI::spei(data=bal0, scale = 12)
+
+plot(spei.thor)
+
+thor <- as.data.frame(spei.thor$fitted)
+tmp2 <- as_tibble(thor$PET_tho) 
+tmp2$year = pre$`year(date)`
+tmp2$month = pre$`month(date)`
+tmp2$yr.mo = paste(tmp2$year, tmp2$month, sep="-")
+
+```
+
+
+
+
+```{r play}
+
+fifty$spin = "fifty"
+sixtyfive$spin = "sixtyfive"
+seventy$spin = "seventy"
+eighty$spin = "hun"
+hundo$spin = "2hun"
+
+allsims <- rbind(fifty, sixtyfive, seventy, nine=eighty, twohundo = hundo)
+
+
+allsims %>% 
+  group_by(year, month, spin) %>% 
+  summarize_at(vars(lai), funs(mean)) %>% 
+  dplyr::filter(year<2019) %>% 
+  mutate(yr.mo = paste(year, month, sep="-")) %>% 
+  ggplot() + 
+  geom_line(aes(x=yr.mo, y=lai, col=spin, group=spin)) + 
+  geom_col(data=tmp2[tmp2$year>2004,], aes(x=yr.mo, y=value*2)) + 
+  theme(axis.text.x = element_text(angle = 90, hjust=1, vjust=0.5)) + 
+  scale_x_discrete(breaks = levels(as.factor(tmp2$yr.mo))[floor(seq(1, 
+                                                     nlevels(as.factor(tmp2$yr.mo)), length.out = 10))]) +
+  geom_vline(aes(xintercept='2017-8')) +
+  geom_vline(aes(xintercept='2014-8')) +
+  geom_vline(aes(xintercept='2011-8')) +
+  ggtitle("LAI and SPEI for different spinup amounts")
+
+```
+
+- Look at ones that meet conditions and see how it crashes - what happens to cpool
+- look at worldfile that gets rewritten - what is starting point 
+- what do carbon pools look like at first year (end of spinup)
+- check rain and the parameters for allocation
+- STATIC epc.phenology_flag , need to change the epc.leafon that will control new growth - needs to do this before summer drought (use april 1 as leafon and 30 some days as n days expand; leafoff is beg Sept); static fixes annual growth to peak in the summertime 

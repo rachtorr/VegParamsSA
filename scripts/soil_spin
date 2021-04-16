@@ -1,0 +1,1 @@
+~/RHESSys-develop/bin/rhessys7.0  -t ../tecfiles/tec.soil -w ../worldfiles/OakPatch.world.0 -whdr ../worldfiles/OakPatch.hdr -r ../OakPatch.flow -st 1947 10 1 1 -ed 2447 10 2 1 -pre ../out/soil_spin -s 0.036294 359.4858 -sv 0.036294 359.4858 -svalt 1.518305 1.785178 -gw 0.346205 0.416299 -b -g -p -climrepeat

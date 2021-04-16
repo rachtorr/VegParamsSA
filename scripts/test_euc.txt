@@ -1,0 +1,8 @@
+# target spinup 
+###
+#~/RHESSys-develop-edit/bin/rhessys7.0  -t ../tecfiles/tec.target -w ../worldfiles/EucPatch.test -whdr ../worldfiles/EucPatch.spin.hdr -r ../flowtables/EucPatch.flow -st 1947 10 1 1 -ed 2600 8 22 1 -pre ../out/euc_target_test -s 0.036294 359.4858 -sv 0.036294 359.4858 -svalt 1.518305 1.785178 -gw 0.346205 0.416299 -vegspinup ../targets/target_euc_spin -b -p -c -g -climrepeat 
+
+
+# next ten years
+###
+~/RHESSys-develop-edit/bin/rhessys7.0  -t ../tecfiles/tec.coast -w ../worldfiles/EucPatch.world -whdr ../worldfiles/EucPatch.hdr -r ../flowtables/EucPatch.flow -st 2010 11 1 1 -ed 2020 9 30 1 -pre ../out/euc_glob -s 0.036294 359.4858 -sv 0.036294 359.4858 -svalt 1.518305 1.785178 -gw 0.346205 0.416299 -b -p -c -g -climrepeat 

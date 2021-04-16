@@ -1,0 +1,250 @@
+---
+title: "patch target spin up"
+date: "8/20/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(RHESSysIOinR)
+library(tidyverse)
+library(reshape2)
+library(gridExtra)
+library(raster)
+library(wesanderson)
+#library(sf)
+
+```
+
+### Coast live oak (*Quercus agrifolia*)
+
+#### Patch spin up 
+
+Soil and litter C and N pools were initialized with the awk script initialize_soil_litter.awk (this was sent by Janet)
+
+Total above ground carbon was added as a target in the update_shadow_strata.c file. It is computed as the sum of the dead and live stem C and the dead and live leaf C. The results were similar to when using stem C, which makes sense because most of the carbon is stored in the stem. 
+
+Targets: 
+
+* Total Carbon = 13.91 [$kgC/m^2$] 
+* Height = 9m 
+* LAI = 4.18
+* Fractional Cover = 0.99
+
+Veg parameters changed in def file: 
+
+* phenology flag: waring
+* epc.max_lai
+* height_to_stem_exp
+* height_to_stem_coef
+
+Years for spin up: 102
+(Including the leaf C with total carbon shortened spin up time compared to only stem C.) 
+
+```{r quag, warning=FALSE}
+target <- readin_rhessys_output("../out/oak/target_oak_lai", b=1, g=1, p=1, c=1)
+
+lai <- ggplot(target$bdg) + geom_line(aes(x=date, y=lai)) + ggtitle("LAI")
+ht <- ggplot(target$pdg) + geom_line(aes(x=date, y=height)) + ggtitle("height")
+sc <- ggplot(target$cdg) + geom_line(aes(x=date, y=(live_stemc + dead_stemc + leafc + dead_leafc)/1000)) + ggtitle("Carbon")
+
+grid.arrange(lai, ht, sc)
+
+
+# other vars to check for stabilization of N and C pools 
+pc <- ggplot(target$bdg) + geom_line(aes(x=date, y=plantc)) + ggtitle("Plant C")
+pn <- ggplot(target$bdg) + geom_line(aes(x=date, y=plantn)) + ggtitle("Plant N")
+soilc <- ggplot(target$bdg) + geom_line(aes(x=date, y=soilc)) + ggtitle("Soil C")
+soiln <- ggplot(target$bdg) + geom_line(aes(x=date, y=soiln)) + ggtitle("Soil N")
+grid.arrange(pc, pn, soilc, soiln, nrow=2)
+```
+
+The data for the target was captured in November 2010, before the drought really hit hard. Using this as a starting point, the model was run with real climate data for the next 8 years, then recycled climate for 3 more years. The vegetation was in dynamic mode so that we could see how it responds to climate. 
+
+```{r ten}
+
+coast <- readin_rhessys_output("../out/oak/coast_oak", b=1, g=1, c=1)
+euccoast <- readin_rhessys_output("../out/euc/euc_glob", b=1, g=1,c=1)
+
+# set color palettes 
+pal <- wes_palette("Zissou1", 100, type = "continuous")
+pal2 <- wes_palette("Darjeeling1", 2, type = "discrete")
+
+
+## climate plots 
+
+clim <- read.csv("/Volumes/GoogleDrive/My Drive/newclim/sb_all_clim_UPDATED.csv")
+
+clim <- clim %>% 
+  mutate(date = as.Date(sprintf("%s-%s-%s", clim$year, clim$month, clim$day))) %>% 
+  dplyr::filter(year > 2009)
+
+rain <- ggplot(clim) + geom_line(aes(x=date, y=rain*1000)) + 
+  labs(y="Precip. (mm)", x="") + 
+  theme_classic() + 
+  #ggtitle("daily precipitation") + 
+  theme(text = element_text(size=24))
+
+temp <- clim %>% 
+  dplyr::select(tmin, tmax, date) %>%
+  melt(id.vars='date') %>%
+  ggplot() + geom_line(aes(x=date, y=value, col=variable)) + 
+  labs(y="Temp. (C)") + theme_classic() + 
+  theme(legend.title = element_blank()) + 
+  #ggtitle("daily temperature") +
+  theme(text = element_text(size=24), legend.position="top") 
+
+grid.arrange(rain, temp, nrow=2)
+
+### Plant plots
+
+coast$bd %>% ggplot(aes(x=as.Date(date), y=rootdepth)) + geom_point()
+
+coast$bd %>% 
+  dplyr::filter(wy<2018) %>% 
+  group_by(wy) %>% summarize_at(vars(et, psn, precip), list(sum)) %>%
+  ggplot() + geom_col(aes(x=as.factor(wy), y=et, fill=precip)) + 
+  #geom_line(aes(x=as.factor(wy), y=precip, fill=precip)) + 
+  ggtitle("annual ET") 
+
+coast$cdg$type = "coastalOak"
+euccoast$cdg$type = "eucalyptus"
+cdg <- rbind(coast$cdg, euccoast$cdg)
+
+psn_cp <- cdg %>% 
+  dplyr::filter(wy<2018) %>% 
+  group_by(wy, type) %>% summarize_at(vars(psn_to_cpool), list(sum)) %>%
+  ggplot() + geom_col(aes(x=wy, y=psn_to_cpool/1000, fill=type), position='dodge') +
+  theme_bw() + 
+  scale_fill_brewer(palette = "Set2", name="") +
+  ggtitle("Annual NPP") + 
+  theme(text = element_text(size=24), legend.position="bottom") + 
+  labs(y="NPP (kgC/m2/d)", x="") 
+
+leafc <- cdg %>% 
+  dplyr::filter(wy<2018) %>% 
+  group_by(wy, type) %>% summarize_at(vars(leafc), list(mean)) %>%
+  ggplot() + geom_col(aes(x=wy, y=leafc/1000, fill=type), position='dodge') +
+  theme_bw() + 
+  scale_fill_brewer(palette = "Set2", name="") +
+  ggtitle("Average Leaf Carbon per year") + 
+  theme(text = element_text(size=24), legend.position="none") + 
+  labs(y="leaf C (kgC/m2)", x="water year") 
+  
+grid.arrange(psn_cp, leafc, nrow=2)
+
+# ET and P 
+coast$bd<- coast$bd %>% 
+  #select(-StreamNO3_from_roads) %>% 
+  mutate(type = "coastalOak")
+euccoast$bd <- euccoast$bd %>% 
+  #select(-StreamNO3_from_roads) %>%
+  mutate(type = "eucalyptus")
+bdg <- rbind(coast$bd, euccoast$bd)
+
+meanmm <- clim %>% group_by(year) %>% 
+  summarize_at(vars(rain), list(sum)) 
+avg <- mean(meanmm$rain)
+
+et <- bdg %>% dplyr::filter(wy<2018) %>%
+  group_by(wy, type) %>% 
+  summarize_at(vars(et, precip), list(sum)) %>%
+  ggplot() +
+  geom_col(aes(x=wy, y=et, fill=type), position='dodge') + 
+  geom_line(aes(x=wy, y=precip)) + 
+  scale_fill_brewer(palette = "Set2", name="") +
+  theme_bw() + 
+  geom_hline(yintercept=avg*1000, linetype='dashed', col='red') +
+  labs(x="water year",y="evapotranspiration and precipitation (mm)") +
+  theme(text = element_text(size=24), legend.position="top") + 
+  ggtitle("Annual Precip and ET")
+  
+
+
+
+```
+
+```{r boxplots}
+
+spin <- readin_rhessys_output("../out/grove/coast_grove", b=1, p=1, c=1, g=1) 
+#spin <- spin$pdg %>% dplyr::filter(year==2010)
+
+class <- raster("../MC_and_RS/hill269_classes.tif")
+patches <- raster("../MC_and_RS/hill269_patches.tif")
+grove <- raster("../MC_and_RS/oakgrove.tif")
+grove_p <- mask(patches, grove)
+grove_class <- mask(class, grove)
+brikt <- brick(trim(grove_p), trim(grove_class))
+wgs84 = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+brikt2 <- projectRaster(brikt, crs=wgs84, method='ngb')
+gpdf <- as.data.frame(rasterToPoints(brikt2))
+colnames(gpdf) <- c("lon", "lat","patchID","vegID")
+
+data <- read.csv("rs_data_df.csv")
+oakdata <- data %>%
+  dplyr::filter(class==81) %>%
+  dplyr::select(LAI=lai,
+         Height=height,  
+         Carbon = carbperarea) %>% 
+  mutate(cat = "data")
+  
+eucdata <- data %>%
+  dplyr::filter(class==34) %>%
+  dplyr::select(LAI=lai,
+         Height=height,  
+         Carbon = carbperarea) %>% 
+  mutate(cat = "data")
+
+## lai and height
+lai <- spin$pdg %>% 
+  dplyr::filter(year == 2010) %>% 
+  dplyr::select(patchID, lai, height)  
+
+# carbon
+c <- spin$cdg %>% 
+  dplyr::filter(year==2010) %>% 
+  dplyr::select(patchID, leafc, dead_leafc, dead_stemc, live_stemc) %>%
+  mutate(Carbon = (leafc + dead_leafc + dead_stemc + live_stemc)/1000)
+
+tojoin <- inner_join(c, lai, by="patchID") %>% 
+  dplyr::select(patchID, lai, Carbon, height)
+veg <- inner_join(tojoin, gpdf, by="patchID") %>% 
+  mutate(cat = "model") %>% 
+  dplyr::select(-lon, -lat)
+
+oakmodel <- veg %>% dplyr::filter(vegID==81) %>% 
+  dplyr::select(LAI = lai,
+                Height = height, Carbon, cat)
+
+oakboxes <- rbind(oakmodel, oakdata)
+oakmelt <- melt(oakboxes)
+
+oakb <- ggplot(oakmelt) + geom_boxplot(aes(x=variable, y=value, fill=cat)) +
+  theme_classic() + labs(x="plant variable", y=" ") +
+  theme(legend.title = element_blank()) + 
+  #scale_fill_brewer(palette = "Set2", name="") +
+  ggtitle("Coastal oak spin up results") + 
+  theme(text = element_text(size=24)) + 
+  labs(y = "LAI /Height [m] /Aboveground Carbon [kg/m^2]")
+
+eucmodel <- veg %>% dplyr::filter(vegID==34) %>% 
+  dplyr::select(LAI = lai,
+                Height = height, Carbon, cat)
+
+eucboxes <- rbind(eucmodel, eucdata)
+eucmelt <- melt(eucboxes)
+
+eucb <- ggplot(eucmelt) + geom_boxplot(aes(x=variable, y=value, col=cat, fill=cat)) +
+  theme_classic() + labs(x="plant variable", y=" ") +
+  theme(legend.title = element_blank()) + 
+  ggtitle("Eucalyptus spin up results") + 
+  scale_fill_brewer(palette = "Pastel1", name="") +
+  theme(text = element_text(size=24), legend.position = "") + 
+  labs(y = "")
+
+grid.arrange(oakb, eucb, nrow=1)
+```
+
+
+
+

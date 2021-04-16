@@ -1,0 +1,15 @@
+101       base_station_id
+100       x_coordinate
+100       y_coordinate
+640       z_coordinate
+3.5       effective_lai
+10       screen_height
+annual       annual_climate_prefix
+0       number_non_critical_annual_sequences
+monthly       monthly_climate_prefix
+0       number_non_critical_monthly_sequences
+../clim/CNRM-CM5_rcp85   daily_climate_prefix
+1
+relative_humidity       number_non_critical_daily_sequences
+none  hourly_climate_prefix
+0       number_non_critical_hourly_sequences

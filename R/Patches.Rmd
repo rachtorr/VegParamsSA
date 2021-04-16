@@ -1,0 +1,221 @@
+---
+title: "patch target spin up"
+date: "8/20/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(RHESSysIOinR)
+library(tidyverse)
+library(reshape2)
+library(gridExtra)
+library(raster)
+#library(sf)
+
+```
+
+### Coast live oak (*Quercus agrifolia*)
+
+#### Patch spin up 
+
+Soil and litter C and N pools were initialized with the awk script initialize_soil_litter.awk (this was sent by Janet)
+
+Total above ground carbon was added as a target in the update_shadow_strata.c file. It is computed as the sum of the dead and live stem C and the dead and live leaf C. The results were similar to when using stem C, which makes sense because most of the carbon is stored in the stem. 
+
+Targets: 
+
+* Total Carbon = 13.91 [$kgC/m^2$] 
+* Height = 9m 
+* LAI = 4.18
+* Fractional Cover = 0.99
+
+Veg parameters changed in def file: 
+
+* phenology flag: waring
+* epc.max_lai
+* height_to_stem_exp
+* height_to_stem_coef
+
+Years for spin up: 102
+(Including the leaf C with total carbon shortened spin up time compared to only stem C.) 
+
+```{r quag, warning=FALSE}
+target <- readin_rhessys_output("../out/oak/target_oak_lai", b=1, g=1, p=1, c=1)
+
+lai <- ggplot(target$bdg) + geom_line(aes(x=date, y=lai)) + ggtitle("LAI")
+ht <- ggplot(target$pdg) + geom_line(aes(x=date, y=height)) + ggtitle("height")
+sc <- ggplot(target$cdg) + geom_line(aes(x=date, y=(live_stemc + dead_stemc + leafc + dead_leafc)/1000)) + ggtitle("Carbon")
+
+grid.arrange(lai, ht, sc)
+
+
+# other vars to check for stabilization of N and C pools 
+pc <- ggplot(target$bdg) + geom_line(aes(x=date, y=plantc)) + ggtitle("Plant C")
+pn <- ggplot(target$bdg) + geom_line(aes(x=date, y=plantn)) + ggtitle("Plant N")
+soilc <- ggplot(target$bdg) + geom_line(aes(x=date, y=soilc)) + ggtitle("Soil C")
+soiln <- ggplot(target$bdg) + geom_line(aes(x=date, y=soiln)) + ggtitle("Soil N")
+grid.arrange(pc, pn, soilc, soiln, nrow=2)
+```
+
+The data for the target was captured in November 2010, before the drought really hit hard. Using this as a starting point, the model was run with real climate data for the next 8 years, then recycled climate for 3 more years. The vegetation was in dynamic mode so that we could see how it responds to climate. 
+
+```{r ten}
+coast <- readin_rhessys_output("../out/oak/coast_oak", b=1, g=1, c=1)
+
+data <- read.csv("oak_hill269.csv")
+
+pal <- wes_palette("Zissou1", 100, type = "continuous")
+
+coast2 <- coast$bd %>% 
+  dplyr::select(LAI = lai,
+         Height = height) %>% 
+  mutate(Carbon = (coast$cdg$leafc + coast$cdg$dead_leafc + coast$cdg$dead_stemc + coast$cdg$live_stemc)/1000, 
+         cat = "model")
+
+data2 <- data %>%
+  dplyr::select(LAI=lai,
+         Height=height,  
+         Carbon = carbperarea) %>% 
+  mutate(cat = "data")
+
+boxes <- rbind(coast2, data2)
+boxes2 <- melt(boxes)
+
+ggplot(boxes2) + geom_boxplot(aes(x=variable, y=value, col=cat)) +
+  theme_classic() + labs(x="plant variable", y=" ") +
+  theme(legend.title = element_blank()) + 
+  scale_color_brewer(pal) +
+  ggtitle("Coastal live oak patch spin up results")
+
+
+euc <- readin_rhessys_output("../out/euc/euc_glob", b=1, g=1, c=1)
+dat <- read.csv("rs_data_df.csv") %>% 
+  dplyr::filter(class==34)
+
+euc2 <- euc$bd %>% 
+  dplyr::select(LAI = lai,
+         Height = height) %>% 
+  mutate(Carbon = (euc$cdg$leafc + euc$cdg$dead_leafc + euc$cdg$dead_stemc + euc$cdg$live_stemc)/1000, 
+         cat = "model")
+
+data2 <- dat %>%
+  dplyr::select(LAI=lai,
+         Height=height,  
+         Carbon = carbperarea) %>% 
+  mutate(cat = "data")
+
+
+box_euc <- rbind(euc2, data2)
+box_euc2 <- melt(box_euc)
+
+ggplot(box_euc2) + geom_boxplot(aes(x=variable, y=value, col=cat)) +
+  theme_classic() + labs(x="plant variable", y=" ") +
+  theme(legend.title = element_blank()) + 
+  scale_color_brewer(pal) +
+  ggtitle("Eucalyptus patch spin up results")
+
+
+clim <- read.csv("/Volumes/GoogleDrive/My Drive/newclim/sb_all_clim_UPDATED.csv")
+
+clim <- clim %>% 
+  dplyr::filter(year > 2010) %>% 
+  mutate(date = as.Date(sprintf("%s-%s-%s", clim$year, clim$month, clim$day)))
+
+rain <- ggplot(clim) + geom_line(aes(x=date, y=rain*1000)) + 
+  labs(y="Precip. (m)") + 
+  theme_classic() + 
+  ggtitle("daily precipitation inputs")
+
+temp <- clim %>% 
+  select(tmin, tmax, date) %>%
+  melt(id.vars='date') %>%
+  ggplot() + geom_line(aes(x=date, y=value, col=variable)) + 
+  labs(y="Temp. (C)") + theme_classic() + 
+  theme(legend.title = element_blank()) + 
+  ggtitle("daily temperature inputs")
+
+lai <- coast$bd %>% 
+  ggplot + geom_boxplot(aes(y=lai)) + ggtitle("LAI for test years")
+lai2 <- data %>% ggplot + geom_boxplot(aes(y=lai)) + ggtitle("data range of LAI")
+grid.arrange(lai, lai2, nrow=1)
+
+ht <- coast$bd %>% ggplot + geom_boxplot(aes(y=height)) + ggtitle("height")
+ht2 <- data %>% ggplot + geom_boxplot(aes(y=height))
+grid.arrange(ht, ht2, nrow=1)
+
+pc <- coast$cdg %>% ggplot + geom_boxplot(aes(y=plantc))  + ggtitle("Plant Carbon")
+pc2 <- data %>% ggplot + geom_boxplot(aes(y=carbperarea)) + ggtitle("range of carbon per area")
+grid.arrange(pc, pc2, nrow=1)
+
+coast$bd %>% ggplot(aes(x=as.Date(date), y=rootdepth)) + geom_point()
+
+coast$bd %>% group_by(wy) %>% 
+  #summarize_at(vars(et, gpsn), list(sum)) %>% 
+  ggplot() + 
+  geom_jitter(aes(x=as.Date(date), y=gpsn)) +
+  #geom_col(aes(x=as.factor(wy), y=gpsn)) + 
+  ggtitle("GPSN")
+
+
+coast$bd %>% 
+  dplyr::filter(wy<2018) %>% 
+  group_by(wy) %>% summarize_at(vars(et, psn, precip), list(sum)) %>% ggplot() + geom_col(aes(x=as.factor(wy), y=et, fill=precip)) + 
+  #geom_line(aes(x=as.factor(wy), y=precip, fill=precip)) + 
+  ggtitle("annual ET") 
+
+
+coast$cdg$type = "coastalOak"
+euc$cdg$type = "eucalypt"
+cdg <- rbind(coast$cdg, euc$cdg)
+
+psn_cp <- cdg %>% 
+  dplyr::filter(wy<2018) %>% 
+  group_by(wy, type) %>% summarize_at(vars(psn_to_cpool), list(mean)) %>%
+  ggplot() + geom_line(aes(x=wy, y=psn_to_cpool, col=type)) +
+  ggtitle("psn_to_cpool")
+
+leafc <- cdg %>% 
+  dplyr::filter(wy<2018) %>% 
+  group_by(wy, type) %>% summarize_at(vars(leafc), list(mean)) %>%
+  ggplot() + geom_line(aes(x=wy, y=leafc, col=type)) +
+  ggtitle("leafc")
+
+coast$bdg$type = "coastalOak"
+euc$bdg <- euc$bdg %>% 
+  select(-StreamNO3_from_roads) %>%
+  mutate(type = "eucalypt")
+bdg <- rbind(coast$bdg, euc$bdg)
+
+lai
+
+gp <- bdg %>% 
+  dplyr::filter(wy<2018) %>% 
+  group_by(wy, type) %>% summarize_at(vars(gpsn), list(mean)) %>% 
+  ggplot() + geom_line(aes(x=wy, y=gpsn, col=type)) +
+  ggtitle("gpsn")
+
+nup <- bdg %>% 
+  dplyr::filter(wy<2018) %>% 
+  group_by(wy, type) %>% summarize_at(vars(nuptake), list(mean)) %>% 
+  ggplot() + geom_line(aes(x=wy, y=nuptake, col=type)) +
+  ggtitle("nuptake")  
+
+ob <- bdg %>% 
+  dplyr::filter(wy<2018) %>% 
+  group_by(wy, type) %>% summarize_at(vars(overstory_biomassc), list(mean)) %>% 
+  ggplot() + geom_line(aes(x=wy, y=overstory_biomassc, col=type)) +
+  ggtitle("overstory_biomassc")
+
+lai <- bdg %>% 
+  dplyr::filter(wy<2018) %>% 
+  group_by(wy, type) %>% summarize_at(vars(lai), list(mean)) %>% 
+  ggplot() + geom_line(aes(x=wy, y=lai, col=type)) +
+  ggtitle("lai")
+
+
+```
+
+**note:** Climate data goes until August 2018, then repeats back from the beginning of the cycle (Oct. 1947) and may not be representative of actual current climate. Need to check if this can be updated, at least through wy2018. 
+
+

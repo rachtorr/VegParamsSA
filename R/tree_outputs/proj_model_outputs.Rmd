@@ -1,0 +1,17 @@
+---
+title: "proj climate model outputs"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(RHESSysIOinR)
+library(tidyverse)
+source("")
+
+
+```
+
+## load in climates to show differences 
+
+## organize and compare rhessys model outputs 

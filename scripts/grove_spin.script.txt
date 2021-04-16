@@ -1,0 +1,1 @@
+~/RHESSys-develop-edit/bin/rhessys7.0  -t ../tecfiles/tec.target -w ../worldfiles/oakgrove.world -whdr ../worldfiles/oakgrove.hdr -r ../flowtables/oakgrove.flow -st 1947 10 1 1 -ed 2450 8 22 1 -pre ../out/grove/spinTEST -s 0.036294 359.4858 -sv 0.036294 359.4858 -svalt 1.518305 1.785178 -gw 0.346205 0.416299 -vegspinup ../targets/grove_spinup -b -p -c -g -climrepeat 

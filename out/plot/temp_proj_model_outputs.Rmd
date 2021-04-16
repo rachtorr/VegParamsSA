@@ -1,0 +1,246 @@
+---
+title: "temperature differences - proj climate model outputs"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(RHESSysIOinR)
+library(tidyverse)
+library(data.table)
+source("../../R/readin_selected_vars.R")
+source("../../../GitHub/climfiles/mkwy.R")
+source("../../R/relativeresilience.R")
+
+```
+
+#### load in precip and temps  
+```{r rains, eval=T, echo=F}
+clim <- read.csv("../../R/hist_clim.csv") %>%
+  dplyr::filter(year>=1940)
+
+proj1 <- read.csv("../../../GitHub/climfiles/clim85_scen.csv") %>% dplyr::select(precip, model, time, year, month, day, tmin=minT, tmax=maxT)
+proj2 <- read.csv("../../../GitHub/climfiles/clim45_scen.csv") %>% dplyr::select(precip, model, time, year, month, day, tmin=minT, tmax=maxT)
+proj_p <- rbind(proj1, proj2)
+
+```
+
+#### organize and compare rhessys model outputs 
+
++ spin up was from 1940 - 2010 with historic climate data for downtown Santa Barbara 
+
+```{r load, echo=F}
+
+proj = c("hist","hot","hotter","lower")
+spec = c("pica","piun","quag","eugl","plra")
+vars = c("lai", "plantc", "plant_resp", "gpsn", "height", "precip")
+#vars = c("lai", "plantc", "gwseasonday", "lfseasonday", "gsi")
+
+
+
+readout = matrix(ncol=14)
+for(i in 1:length(proj)){
+  for(j in 1:length(spec)){
+    df <- readin_selected_vars(vars = vars,
+                                dir = paste(proj[i],
+                                            spec[j],
+                                            "allsim",
+                                            sep="/")) %>%
+      mutate(code = spec[j], 
+             climmod = proj[i])
+    
+    colnames(readout) <- colnames(df)
+    readout = rbind(readout,df)
+  }
+}
+
+readout <- readout[-1,]
+readout$date = as.Date(paste(readout$year, readout$month, readout$day, sep="-"))
+
+```
+
+Temperature scenarios:
+
+- **hist:** actual data 
+- **hot:** increase by 2 deg C 
+- **hotter:** increase by 4.6 deg C, the largest positive difference in clim projections
+- **lower:** decrease by 4.2 deg C, the largest negative difference in clim projections
+
+```{r groups, echo=F}
+
+## daily boxplots 
+readout1 <- readout 
+#%>% dplyr::filter(code=="eugl" | code=="plra")
+
+rmean <- readout1 %>% group_by(code, climmod, run) %>% summarize_at(all_of(vars), funs(mean))
+ggplot(rmean) + geom_boxplot(aes(x=code, y=lai, fill=climmod)) + ggtitle("avg daily LAI")
+ggplot(rmean) + geom_boxplot(aes(x=code, y=plantc, fill=climmod)) + ggtitle("avg plant C")
+
+## monthly - seasonal changes for each scenario
+rmonths <- readout1 %>% group_by(code, climmod, month) %>% summarize_at(all_of(vars), funs(mean))
+ggplot(rmonths) + geom_line(aes(x=as.factor(month), y=gpsn, col=climmod, group=climmod)) + facet_wrap('code')
+
+## yearly avg for each scenario
+ryears <- readout1 %>% group_by(code, climmod, year) %>% summarize_at(all_of(vars), funs(mean))
+
+annp <- mkdate(readout1) %>% dplyr::filter(code=="eugl") %>% 
+  group_by(climmod, wy) %>% summarize_at(vars(precip), list(sum))
+
+ryears2 <- readout1 %>% group_by(code, climmod, year, run) %>% summarize_at(all_of(vars), funs(mean))
+
+ryears2 %>% dplyr::filter(climmod=="hist") %>% 
+  ggplot() + geom_line(aes(x=year, y=lai, col=as.factor(run), group=run), show.legend = F) + facet_wrap('code', scales = "free") + ggtitle("historical climate")
+
+```
+
+
+#### historic annual clim anomalies
+
+Note that the drought is considered to be from 2012-2016, with wy 2014 the most extreme hot/dry concurrent event. 
+
+```{r climscen, echo=F}
+clim = read.csv("../../../GitHub/climfiles/sb_all_clim_UPDATED.csv")
+split <- str_split(clim$cal, pattern = "-")
+clim <- clim %>%
+  mutate(year = as.numeric(lapply(split, "[[",1))) %>%
+  mutate(month = as.numeric(lapply(split, "[[", 2))) %>%
+  mutate(day = as.numeric(lapply(split, "[[", 3))) %>% mkwy()
+
+precip_anom <- clim %>% group_by(wy) %>% summarize_at(vars(p),list(sum)) 
+mean_p = mean(precip_anom$p) # avg annual rainfall for 1940-2020
+precip_anom$anom <- (precip_anom$p - mean_p)/mean_p
+ggplot(precip_anom) + geom_col(aes(x=wy,y=anom, fill=anom)) + ggtitle(paste("Precip anomaly, spin up period, mean=", mean_p))
+pp_plot <- precip_anom %>% dplyr::filter(wy>2010 & wy < 2019) %>% 
+  ggplot() + geom_col(aes(x=wy,y=anom, fill=anom))
+
+precipplot <- precip_anom %>% dplyr::filter(wy>2010 & wy < 2019) %>% 
+  ggplot() + geom_col(aes(x=wy,y=p, fill=anom)) 
+
+t_anom <- clim %>% 
+  mutate(tave =(tmin+tmax)/2) %>%
+  group_by(wy) %>%
+  summarize_at(vars(tave),funs(mean)) 
+mean_t = mean(t_anom$tave) # avg annual rainfall for 1940-2020
+t_anom$anom <- (t_anom$tave - mean_t)/mean_t
+ggplot(t_anom) + geom_col(aes(x=wy,y=anom, fill=anom)) + 
+  ggtitle(paste("temperature anomoly, spinup, mean=", mean_t))
+tt_plot <- t_anom %>% dplyr::filter(wy>2010 & wy < 2019) %>% 
+  ggplot() + geom_col(aes(x=wy,y=anom, fill=anom)) + scale_fill_gradient(high='red', low='yellow')
+
+grid.arrange(pp_plot+ggtitle("precip"), tt_plot+ggtitle("temp"))
+
+# 
+dtyr = 2014
+hist_anom_t = t_anom$anom[t_anom$wy==dtyr]
+hist_anom_p = precip_anom$anom[precip_anom$wy==dtyr]
+
+
+
+```
+
+Should T anomaly be averaged for only summer or winter months instead of the whole year? 
+
+#### More extreme climate scenarios 
+
+main question: does it make sense to use climate projections here, or is it easier to manually change the historic data to be the same pattern, just % larger or smaller magnitude?
+
+1. hotter
+  + relatively same precip, but varying temp
+  + if temperature was twice as hot, or double the anomaly
+  + various % of that temperature increasing
+  
+```{r hot, echo=F, eval=F}
+## have to group by water year first 
+proj_p2 = mkwy(proj_p) %>% group_by(wy, model) %>% 
+  summarize_at(vars(precip), funs(sum)) %>%
+  mutate(p_anom = (precip - mean_p)/mean_p)
+proj_t = mkwy(proj_p) %>% group_by(wy, model) %>% 
+  summarize_at(vars(tmin, tmax), funs(mean)) %>%
+  mutate(tave = (tmin+tmax)/2) %>%
+  mutate(t_anom = (tave - mean_t)/mean_t)
+
+allproj <- inner_join(proj_p2, proj_t, by=c("model","wy")) 
+ 
+### Hotter 
+# range to get similar precip value
+hist_anom_p_range = list(hist_anom_p+hist_anom_p*.1, hist_anom_p-hist_anom_p*.1)
+# range to get twice the temperature anom
+hist_anom_t_range = list(2*hist_anom_t+2*hist_anom_t*.1,
+                         2*hist_anom_t-2*hist_anom_t*.1)
+
+first <- allproj %>% dplyr::filter(
+  p_anom > hist_anom_p_range[[1]] & 
+  p_anom < hist_anom_p_range[[2]] )
+ggplot(first) + geom_jitter(aes(x=p_anom, y=t_anom)) + 
+  geom_hline(aes(yintercept=hist_anom_t, col='2014')) + 
+  geom_hline(aes(yintercept=hist_anom_t_range[[1]], col='range')) +
+  geom_hline(aes(yintercept=hist_anom_t_range[[2]], col='range'))
+
+hot <- first %>% dplyr::filter(
+  t_anom > hist_anom_t_range[[2]] & 
+  t_anom < hist_anom_t_range[[1]] )
+
+hottime <- allproj %>% 
+  dplyr::filter(model==hot$model[1]) %>%
+  dplyr::filter(wy>=hot$wy[1]-1)
+hotplot1 <- ggplot(hottime) + geom_col(aes(x=as.factor(wy), y=p_anom)) + 
+  geom_col(data=hot, aes(x=as.factor(wy), y=p_anom, fill='selected')) + geom_hline(aes(yintercept = hist_anom_p)) + ggtitle(paste(hot$model[1],"precip anom"))
+
+hotplot2 <- ggplot(hottime) + geom_col(aes(x=as.factor(wy), y=t_anom)) + 
+  geom_col(data=hot, aes(x=as.factor(wy), y=t_anom, fill='selected')) + geom_hline(aes(yintercept = hist_anom_t)) + ggtitle(paste(hot$model[1],"temp anom"))
+
+
+```
+
+```{r dri, echo=F, eval=F}
+
+hist_anom_p_range = list(1.25*hist_anom_p+1.25*hist_anom_p*.1, 
+                         1.25*hist_anom_p-1.25*hist_anom_p*.1)
+# range to get similar temperature anom
+hist_anom_t_range = list(hist_anom_t+hist_anom_t*.1,
+                         hist_anom_t-hist_anom_t*.1)
+
+first <- allproj %>% dplyr::filter(
+  t_anom > hist_anom_t_range[[2]] & 
+    t_anom < hist_anom_t_range[[1]] )
+ggplot(first) + geom_col(aes(x=wy, y=t_anom, fill=p_anom)) + facet_wrap('model')
+ggplot(first) + geom_jitter(aes(x=p_anom, y=t_anom, col=p_anom)) + geom_vline(aes(xintercept=hist_anom_p))
+
+
+dry <- first %>% dplyr::filter(
+  p_anom > hist_anom_p_range[[1]] & 
+    p_anom < hist_anom_p_range[[2]] )
+nrow(dry)
+dry
+drytime <- allproj %>% 
+  dplyr::filter(model==dry$model[1]) %>%
+  dplyr::filter(wy>=dry$wy[1]-1)
+dryplot1 <- ggplot(drytime) + geom_col(aes(x=as.factor(wy), y=p_anom)) + 
+  geom_col(data=dry, aes(x=as.factor(wy), y=p_anom, fill='selected')) + geom_hline(aes(yintercept = hist_anom_p)) + ggtitle(paste(dry$model[1],"precip anom"))
+
+dryplot2 <- ggplot(drytime) + geom_col(aes(x=as.factor(wy), y=t_anom)) + 
+  geom_col(data=dry, aes(x=as.factor(wy), y=t_anom, fill='selected')) + geom_hline(aes(yintercept = hist_anom_t)) + ggtitle(paste(dry$model[1],"temp anom"))
+
+```
+
+```{r output}
+readout <- mkwy(readout)
+
+readout %>% dplyr::filter(code=='quag' & run==1) %>% 
+  group_by(wy, climmod) %>% summarize_at(vars(precip), list(sum)) %>%
+  ggplot() + geom_line(aes(x=wy, y=precip)) + ggtitle("precip")
+
+ggplot(readout[readout$wy<2018,]) + geom_boxplot(aes(x=as.factor(wy), y=lai, fill=climmod)) + facet_wrap('code', scales='free')
+
+ggplot(readout[readout$wy<2018,]) + geom_boxplot(aes(x=as.factor(wy), y=gpsn, fill=climmod)) + facet_wrap('code', scales='free')
+
+readout %>% group_by(wy, code, climmod) %>% 
+  summarize(lai=mean(lai)) %>%
+  ggplot() + 
+  geom_col(data=readout[readout$run==1,], aes(x=wy, y=precip/500), fill='grey') + 
+  geom_line(aes(
+    x=wy, y=lai, col=climmod)) + 
+  facet_wrap("code", scales='free') 
+  
+```
+

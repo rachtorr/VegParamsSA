@@ -1,0 +1,306 @@
+---
+title: "sb urban tree parameters"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(reshape2)
+source("../relativeresilience.R")
+```
+
+Five different tree species were used to select parameter sets to represent different types found around Santa Barbara.
+
+1. coastal live oak *Quercus agrifolia* - native broadleaf evergreen
+2. canary island pine *Pinus canariensis* - needleleaf evergreen
+3. victorian box *Pittosporum undulatum* - nonnative broadleaf evergreen
+4. blue gum eucalyptus *Eucalyptus globulus* - nonnative broadleaf deciduous
+5. california sycamore *Platanus racemos* - native broadleaf deciduous 
+
+Steps taken to select the parameters were as follows:
+
+
+
+```{r loadin, include=F, message=F}
+group_tree <- function(name, year=TRUE){
+  
+  tbl <- read.csv(paste(name,"outputs.csv", sep="_"))
+  
+  if(year==T){
+    tmp <- tbl %>% group_by(year, run) %>% summarize_at(vars(lai, plantc), funs(mean)) %>% mutate(code=name)
+  } else {
+    tmp <- tbl %>% group_by(yd) %>% summarize_at(vars(lai, plantc), funs(mean)) %>% mutate(code=name)
+  }
+  
+  return(tmp)
+}
+
+## load in and create df 
+trees <- list("quag","eugl","plra","piun","pica")
+
+get_year2 <- lapply(trees, group_tree)
+dfyr2 <- do.call(rbind.data.frame, get_year2)
+
+dfyr <- do.call(rbind.data.frame, get_year2) %>% 
+  group_by(year, code) %>% summarize_all(funs(mean))
+
+# get_yd <- lapply(trees, group_tree, year=FALSE)
+# dfday <- do.call(rbind.data.frame, get_yd)
+
+```
+## Plots of model output 
+
+```{r plots}
+
+## summarized annually 
+dfyr %>%  
+  ggplot() + geom_line(aes(x=as.factor(year), y=lai, col=code, group=code))
+
+dfyr %>% dplyr::filter(year>2009 & year < 2020) %>% 
+  ggplot() + geom_line(aes(x=as.factor(year), y=lai, col=code, group=code))
+
+dfyr %>% 
+  ggplot() + geom_line(aes(x=as.factor(year), y=plantc, col=code, group=code))
+
+#dfday %>% ggplot() + geom_line(aes(x=yd, y=lai, col=code))
+
+dfyr2 %>% ungroup() %>%
+  dplyr::filter(year ==2011 | year==2014 | year==2017) %>% 
+  ggplot() + geom_boxplot(aes(x=code, y=lai, fill=as.factor(year))) + ggtitle("annual avg LAI") 
+
+dfyr2 %>% ungroup() %>%
+  dplyr::filter(year ==2011 | year==2014 | year==2017) %>% 
+  ggplot() + geom_boxplot(aes(x=code, y=plantc, fill=as.factor(year))) + ggtitle("annual avg plantc")
+
+```
+
+## Plots of rs data and model outputs 
+
+```{r MAdata} 
+
+# load in mikes data 
+rs_dat <- read.csv("~/Google Drive/My Drive/plant_params/data/alonzo_data_df.csv")
+rs_dat <- dplyr::filter(rs_dat, fractional_cov > 0.7)
+trees_rs <- rs_dat %>% dplyr::filter(
+    class==81 | #QUAG 
+    class==74 | #PLRA
+    class==73 | #PIUN
+    class==66 | #PICA
+    class==34 ) #EUGL
+
+ggplot(trees_rs) + geom_boxplot(aes(x=as.factor(class), y=lai, fill=as.factor(class))) + ggtitle("LAI estimates from alonzo 2016")
+
+trees_rs$code <- NA
+trees_rs$code[trees_rs$class==81] <- 'quag'
+trees_rs$code[trees_rs$class==74] <- 'plra'
+trees_rs$code[trees_rs$class==73] <- 'piun'
+trees_rs$code[trees_rs$class==66] <- 'pica'
+trees_rs$code[trees_rs$class==34] <- 'eugl'
+
+ggplot() +
+  geom_boxplot(data=dfyr2, aes(x="model", y=lai, fill='rhessys'),position=position_dodge2(padding=0.5)) + facet_wrap('code') + 
+  geom_boxplot(data=trees_rs, aes(x="data", y=lai, fill='alonzo'), position=position_dodge2(padding = 0.5)) + facet_wrap('code') + 
+  ggtitle("compare LAI")
+
+ggplot() +
+  geom_boxplot(data=dfyr2, aes(x="model", y=plantc, fill='rhessys')) + facet_wrap('code') + 
+  geom_boxplot(data=trees_rs[trees_rs$carbon<100,], aes(x="data", y=carbon, fill='alonzo')) + facet_wrap('code') + 
+  ggtitle("compare plant carbon (kgC")
+
+# ggplot() +
+#   geom_boxplot(data=dfyr2, aes(x="model", y=lai, fill='rhessys')) + facet_wrap('code') + 
+#   geom_boxplot(data=trees_rs, aes(x="data", y=lai, fill='alonzo')) + facet_wrap('code') +
+#   ggtitle("compare height (m)")
+
+```
+
+## Plots of NDVI and model outputs 
+
+```{r DMdata}
+# load in David's data 
+vis <- read.csv("/Volumes/GoogleDrive/My Drive/plant_params/DM_data/tree_and_turfgrass_monroe2_selected_weightedmeanVIs.csv")
+
+trees_vi <- vis %>% dplyr::filter(sp_class==81|
+                                    sp_class==74|
+                                    sp_class==73|
+                                    sp_class==66|
+                                    sp_class==34)
+vi_dens <- ggplot(trees_vi) + geom_density(aes(x=NDVI, col=as.factor(year))) + facet_wrap("sp_code")
+
+rh_dens <- dfyr2 %>% ungroup() %>%
+  dplyr::filter(year ==2011 | year==2014 | year==2017) %>% 
+  ggplot() + geom_density(aes(x=lai,  col=as.factor(year))) + facet_wrap("code")
+
+grid.arrange(vi_dens, rh_dens)
+
+```
+
+#### Resilience indices 
+
+ Llorett et al. 2011 defines resilience as the capacity to reach pre-episode growth levels and relative resilience as the resilience weighted by the damage incurred during the episode. 
+ 
+ By looking at time series as each year being relative the the pre-drought conditions, we can see how many years it takes to recover (or not at all). can also figure out which year to consider the drought occurring - where do we assign drought vs. post drought? 
+ 
+ $resistance = Drought / PreDrought$
+ 
+ $recovery = PostDrought / Drought$
+ 
+ $resilience = PostDrought / PreDrought$
+ 
+ $RelativeResilience = (PostDrought-Drought)/PreDrought$
+
++ this example uses coast live oak 
++ 2011 is year used as pre-drought 
+
+
+
+In the model, tree LAI responds the worst to the drought in 2015, after the months of experiencing the extreme heat in 2014 and 2015. 
+
+```{r res, message=F, echo=F}
+ex <- dfyr2
+
+# first look at resistance based on decided year 2011 (as year we were filtering on, considered the baseline)
+res <- ex %>% group_by(year, run, code) %>% 
+  summarize_at(vars(lai), funs(mean)) 
+res$resilience = res$lai/res$lai[res$year==2011]
+
+res %>% dplyr::filter(resilience < 1) %>%
+ggplot() + geom_line(aes(x=year, y=resilience, col=as.factor(run)), show.legend=F) + facet_wrap('code') +
+  ggtitle("resistance = (avg. LAI in yr)/(avg 2011 LAI)") + facet_wrap('code')
+  
+res %>% 
+  dplyr::filter(resilience < 1.1 ) %>% 
+  ggplot() + geom_boxplot(aes(x=code, y=resilience, fill=code)) + ggtitle("resilience = (post-drought LAI)/(pre-drought LAI)") +
+  theme_bw() + theme(legend.position = 'top', text = element_text(size=10), plot.title = element_text(size = 11))
+
+ex$wy = ex$year
+lai_ind <- relativeresilience(df=ex, 
+                              var='lai',
+                              preyr=2011)
+drtyr = lai_ind[[2]]
+lai_ind = as.data.frame(lai_ind[1])
+
+lai_ind$year = lai_ind$wy
+# plots 
+rrplot <- lai_ind %>% dplyr::filter(year > 2010) %>% 
+  ggplot() + geom_line(aes(x=as.factor(year), y=rr, col=as.factor(run), group=run), show.legend=F) + ggtitle("relative resilience") + facet_wrap('code')
+recplot <- lai_ind %>% dplyr::filter(year > 2010) %>%
+  #dplyr::filter(wy > drtyr-1) %>% 
+  ggplot() + geom_line(aes(x=as.factor(wy), y=recover, col=as.factor(run), group=run), show.legend=F) + facet_wrap('code')
+
+resilplot <- lai_ind %>% dplyr::filter(year > 2010) %>%
+  #dplyr::filter(wy > drtyr-1) %>% 
+  ggplot() + geom_line(aes(x=as.factor(year), y=resil, col=as.factor(run), group=run), show.legend=F) + ggtitle("resilience = post/pre") + facet_wrap('code')
+
+resilplot
+rrplot
+
+```
+
+
+
+
+## Plots of parameter distributions 
+
+```{r params}
+p_dec <- read.csv("decid_params.csv")
+p_ev <- read.csv("evg_broadleaf_params.csv")
+p_con <- read.csv("pica_conifer_params.csv")
+
+p_dec2 <- cbind(p_dec[,15:54], p_dec$code)
+p_ev2 <- cbind(p_ev[,15:54], p_ev$code)
+p_con2 <- cbind(p_con[,15:54], p_con$code)
+
+p_names <- c(
+      "pore_size_index",
+      "psi_air",
+      "run",
+       "epc.leaf_cn",
+       "epc.branch_turnover",
+       "epc.gl_smax",
+       "epc.flnr_age_mult",
+       "epc.litter_moist_coef",
+       "epc.psi_close",
+       "mrc.q10",
+       "epc.vpd_close",
+       "epc.leaf_turnover",
+       "epc.froot_turnover",
+       "epc.storage_transfer_prop",
+       "epc.height_to_stem_coef",
+       "epc.waring_pa",
+        "epc.root_distrib_parm",
+       "epc.proj_sla",
+       "epc.alloc_stemc_leafc",
+       "epc.ext_coef",
+       "specific_rain_capacity",
+       "epc.flnr_sunlit",
+       "epc.flnr_shade",
+       "epc.netpabs_sunlit",
+       "epc.netpabs_shade",
+       "epc.netpabs_age_mult",
+      "epc.cpool_mort_fract",
+       "epc.min_percent_leafg",
+      "epc.livewood_turnover",
+      "epc.waring_pb",
+      "epc.max_storage_percent",
+      "epc.min_leaf_carbon",
+      "epc.resprout_leaf_carbon",
+      "epc.alloc_frootc_leafc",
+      "epc.frootc_crootc",
+      "epc.alloc_prop_day_growth",
+      "epc.day_leafon",
+       "epc.day_leafoff",
+       "epc.ndays_expand",
+       "epc.ndays_litfall", "code")
+
+colnames(p_dec2) <- p_names
+colnames(p_ev2) <- p_names
+colnames(p_con2) <- p_names
+
+all_p <- rbind(p_dec2, p_ev2, p_con2)
+
+###### now can use to plot 
+
+ggplot(all_p) + geom_boxplot(aes(x=as.factor(code), y=epc.proj_sla, fill=as.factor(code))) + ggtitle("proj_sla")
+
+ggplot(all_p) + geom_boxplot(aes(x=as.factor(code), y=epc.leaf_cn, fill=as.factor(code))) + ggtitle("leaf_cn")
+
+ggplot(all_p) + geom_boxplot(aes(x=as.factor(code), y=epc.waring_pa, fill=as.factor(code))) + ggtitle("waring_pa")
+
+ggplot(all_p) + geom_boxplot(aes(x=as.factor(code), y=epc.branch_turnover, fill=as.factor(code))) + ggtitle("branch_turnover")
+
+ggplot(all_p) + geom_boxplot(aes(x=as.factor(code), y=epc.leaf_turnover, fill=as.factor(code))) + ggtitle("leaf_turnover")
+
+comb <- left_join(dfyr2, all_p, by=c('code','run')) %>%
+  dplyr::filter(year==2011 | year==2014 | year==2017) %>% 
+  group_by(year, run, code) %>% summarize_all(funs(mean), na.rm=T)
+
+```
+
+key parameters for lai and plantc:
+
+- needleleaf: pore size entry, psi air index, psi_close 
+- decid: waring_pa, proj_sla
+- both: netpabs_sunlit, netpabs_shade, branch_turnover 
+
+```{r comb_plots}
+
+ggplot(comb) + geom_jitter(aes(x=epc.branch_turnover, y=plantc, col=as.factor(year))) + facet_wrap('code') +
+  ggtitle("branch_turnover")
+
+ggplot(comb) + geom_jitter(aes(x=epc.leaf_turnover, y=lai, col=as.factor(year))) + facet_wrap('code') +
+  ggtitle("leaf_turnover") + geom_smooth(aes(x=epc.leaf_turnover, y=lai, col=as.factor(year)))
+
+ggplot(comb) + geom_jitter(aes(x=epc.waring_pa, y=lai, col=as.factor(year))) + facet_wrap('code') + ggtitle("waring pa")
+
+
+ggplot(comb) + geom_jitter(aes(x=epc.proj_sla, y=lai, col=as.factor(year))) + facet_wrap('code') + ggtitle("proj_sla")
+
+ggplot(comb) + geom_jitter(aes(x=epc.psi_close, y=lai, col=as.factor(year))) + facet_wrap('code') +
+  ggtitle("psi_close")
+
+
+
+
+```

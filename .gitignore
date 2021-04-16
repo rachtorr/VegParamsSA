@@ -1,3 +1,8 @@
 .RData
 .Rhistory
 .Rproj.user/
+*.daily
+*.yearly
+*.monthly
+*.hourly
+*.params

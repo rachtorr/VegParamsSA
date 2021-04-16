@@ -1,0 +1,351 @@
+# load packages and set directory
+library(RHESSysIOinR)
+library(tidyverse)
+library(sensitivity)
+source("~/RHESSysIOinR-master/R/select_output_variables_R.R")
+setwd("~/Documents/patches/scripts")
+
+# 1: set up input files and command line options
+# RHESSys Inputs
+input_rhessys <- list()
+input_rhessys$rhessys_version <- "~/RHESSys-develop/bin/rhessys7.2"
+input_rhessys$tec_file <- "../tecfiles/tec.coast"
+input_rhessys$world_file <- "../worldfiles/EucPatch.world.0"
+input_rhessys$world_hdr_prefix <- "../worldfiles/EucPatch.hdr"
+input_rhessys$flow_file <- "../flowtables/OakPatch.flow"
+input_rhessys$start_date <- "1940 10 1 1"
+input_rhessys$end_date <- "2020 10 2 2"
+input_rhessys$output_folder <- "../out/decid/eugl"
+input_rhessys$output_filename <- "decid.sob"
+input_rhessys$command_options <- c("-b -g -c -climrepeat")
+
+# HDR (header) file
+input_hdr_list <- list()
+input_hdr_list$basin_def <- c("../defs/stdbasin.def")
+input_hdr_list$hillslope_def <- c("../defs/stdhillslope.def")
+input_hdr_list$zone_def <- c("../defs/stdzone.def")
+input_hdr_list$soil_def <- c("../defs/shallow_NT.def")
+input_hdr_list$landuse_def <- c("../defs/lu_undev.def")
+input_hdr_list$stratum_def <- c("../defs/veg_eucalypt.def")
+input_hdr_list$base_stations <- c("../clim/mission_base")
+
+
+# select which variables to look at from output
+output_variables <- data.frame(out_file=character(), variable=character(), stringsAsFactors=FALSE)
+output_variables[1,] <- data.frame("bd", "lai", stringsAsFactors=FALSE)
+output_variables[2,] <- data.frame("bd", "height", stringsAsFactors = FALSE)
+output_variables[3,] <- data.frame("bd", "plantc", stringsAsFactors = FALSE)
+output_variables[4,] <- data.frame("bd", "rootdepth", stringsAsFactors = FALSE)
+
+output_variables[5,] <- data.frame("cdg", "leafc", stringsAsFactors=FALSE)
+output_variables[6,] <- data.frame("cdg", "live_stemc", stringsAsFactors=FALSE)
+output_variables[7,] <- data.frame("cdg", "live_crootc", stringsAsFactors=FALSE)
+output_variables[8,] <- data.frame("cdg", "dead_stemc", stringsAsFactors = FALSE)
+output_variables[9,] <- data.frame("cdg", "dead_crootc", stringsAsFactors=FALSE)
+output_variables[10,] <- data.frame("cdg", "dead_leafc", stringsAsFactors = FALSE)
+output_variables[11,] <- data.frame("cdg", "leafc_store", stringsAsFactors=FALSE)
+
+
+#########################################################################
+# make tec file - neeed to add part from generate_input_files
+#########################################################################
+## ***Stop - only do this if needed***
+#input_tec_data <- NULL
+input_tec_data <- data.frame(year=integer(),month=integer(),day=integer(),hour=integer(),name=character(),stringsAsFactors=FALSE)
+input_tec_data[1,] <- data.frame(1957, 10, 1, 1, "print_daily_on", stringsAsFactors=FALSE)
+input_tec_data[2,] <- data.frame(1957, 10, 1, 2, "print_daily_growth_on", stringsAsFactors=FALSE)
+
+if (is.null(input_tec_data) == FALSE){
+  make_tec_file(tec_file = input_rhessys$tec_file, tec_data = input_tec_data)
+  print(paste("Tec file has been written"))
+}
+
+
+#########################################################################
+  ### set up option_sets_def_par 
+  option_sets_all = read.csv("~/Documents/patches/R/decid_params.csv")  
+  option_sets_all$output_folder = "../out/decid"
+  option_sets_all$rhessys_version = "~/RHESSys-develop/bin/rhessys7.2"
+  
+  ### which def file is being changed
+  def_evr = "../defs/veg_decid.def"
+  def_soil = "../defs/shallow_NT.def"
+  
+  option_sets_all = filtered
+  
+  ### convert back to option_sets_def_par so that def file param names are listed as column headers 
+  p2 <- option_sets_all[,15:51]
+  
+  p_names <- c(
+    "pore_size_index",
+    "psi_air_entry",
+    "group_id",
+    "epc.leaf_cn",
+    "epc.branch_turnover",
+    "epc.gl_smax",
+    "epc.flnr_age_mult",
+    "epc.litter_moist_coef",
+    "epc.psi_close",
+    "mrc.q10",
+    "epc.vpd_close",
+    "epc.leaf_turnover",
+    "epc.froot_turnover",
+    "epc.storage_transfer_prop",
+    "epc.height_to_stem_coef",
+    "epc.waring_pa",
+    "epc.root_growth_direction",
+    "epc.root_distrib_parm",
+    "epc.proj_sla",
+    "epc.alloc_stemc_leafc",
+    "epc.ext_coef",
+    "specific_rain_capacity",
+    "epc.flnr_sunlit",
+    "epc.flnr_shade",
+    "epc.netpabs_sunlit",
+    "epc.netpabs_shade",
+    "epc.netpabs_age_mult",
+    "epc.cpool_mort_fract",
+    "epc.min_percent_leafg",
+    "epc.livewood_turnover",
+    "epc.waring_pb",
+    "epc.max_storage_percent",
+    "epc.min_leaf_carbon",
+    "epc.resprout_leaf_carbon",
+    "epc.alloc_frootc_leafc",
+    "epc.frootc_crootc",
+    "epc.alloc_prop_day_growth")
+  
+  colnames(p2) <- p_names 
+  soils <- p2[,1:3]
+  veg <- p2[,3:37]
+  option_sets_def_par = list(soils, veg)
+  names(option_sets_def_par) <- c(def_soil, def_evr)
+  #########################################################################
+  
+  
+  
+# this first generates a new def file based on parameters from list
+# then runs rhessys for however much time is set
+# then takes output and puts into new file in directory 'allsim'
+# each time params change, the def file is written over, not saved. Each run will have an output that should correspond with ID params in row of csv
+
+
+  
+# start here to run
+if(nrow(option_sets_def_par[[1]])==nrow(option_sets_all)){
+
+  #saveRDS(run_sob, "../out/RHESSysIOinR_output/allsim/soboljansenoutput.rds")
+  #write.csv(option_sets_all, file.path(input_rhessys$output_folder, paste(input_rhessys$output_filename, "_all_options.csv", sep="")), row.names = FALSE, quote=FALSE)
+
+  option_sets_rhessys_rows <- nrow(option_sets_all)
+
+  system.time(
+# Generate new def files for each run
+# aa = def file being changed, in this case it's only 1
+# bb is ID, so also applies to what run #
+   # for (aa in seq_along(option_sets_def_par)){
+
+      # Step through each unique parameter set and make def file
+      for (bb in seq_along(option_sets_def_par[[1]]$group_id)){
+
+        for(aa in seq_along(option_sets_def_par)){
+          change_def_file(def_file = names(option_sets_def_par)[aa],
+                          par_sets = as_tibble(dplyr::select(option_sets_def_par[[aa]], -group_id))[bb,],
+                          file_name_ext = "")
+          
+          print(paste("New def file written for file", names(option_sets_def_par)[aa]))
+        }
+
+        print(paste("----------------- Run", bb ,"of", option_sets_rhessys_rows, "-----------------"))
+
+        # Call RHESSys for spinup
+        rhessys_command(rhessys_version = option_sets_all$rhessys_version[bb],
+                        world_file = option_sets_all$world_file[bb],
+                        world_hdr_file = "../worldfiles/EucPatch.hdr",
+                        tec_file = "../tecfiles/tec.spinup_multiple.spinup",
+                        flow_file = option_sets_all$flow_file[bb],
+                        start_date = "1940 10 1 1",
+                        end_date = "2020 10 1 1",
+                        output_file = paste(option_sets_all$output_folder[bb],"/", option_sets_all$output_filename[bb], sep=""),
+                        input_parameters = "-s 0.036294 359.485800 -sv 0.036294 359.485800 -gw 0.346205 0.416299",
+                        command_options = "-b -g -c -climrepeat -vmort_off")
+
+        #############################################################
+        ## spin up 50 (actually 90 as of today 12/1)
+        #############################################################
+        
+        cmd = sprintf("mv ../worldfiles/EucPatch.world.0.Y2011M10D1H1.state ../worldfiles/EucWorld.spun50")
+      system(cmd)
+
+      print(paste("Spin up complete"))
+
+      # for run with output
+      rhessys_command(rhessys_version = option_sets_all$rhessys_version[bb],
+                      world_file = "../worldfiles/EucWorld.spun50",
+                      world_hdr_file = "../worldfiles/EucPatch.hdr",
+                      tec_file = "../tecfiles/tec.coast",
+                      flow_file = option_sets_all$flow_file[bb],
+                      start_date = "2005 9 30 1",
+                      end_date = "2020 10 1 1",
+                      output_file = paste(option_sets_all$output_folder[bb], "spinup50", "decid.sob", sep="/"),
+                      input_parameters = "-s 0.036294 359.485800 -sv 0.036294 359.485800 -gw 0.346205 0.416299",
+                      command_options = "-b -g -c -climrepeat")
+
+
+        # Process RHESSys output
+          if (is.null(output_variables[1]) == F){
+            select_output_variables_R(output_variables = output_variables,
+                                      output_folder =  paste(input_rhessys$output_folder,"spinup50", sep="/"),
+                                      output_filename = input_rhessys$output_filename,
+                                      run = bb,
+                                      max_run = option_sets_rhessys_rows
+            )
+          }
+      }
+  )
+} 
+      #############################################################
+      ## spin up 65 
+      #############################################################
+      
+      cmd = sprintf("mv ../worldfiles/OakPatch.world.0.Y2011M10D1H1.state ../worldfiles/OakWorld.spun65")
+      system(cmd)
+      
+      print(paste("Spin up complete"))
+      
+      # for run with output
+      rhessys_command(rhessys_version = option_sets_all$rhessys_version[bb],
+                      world_file = "../worldfiles/OakWorld.spun65",
+                      world_hdr_file = "../worldfiles/OakPatch.hdr",
+                      tec_file = "../tecfiles/tec.coast",
+                      flow_file = option_sets_all$flow_file[bb],
+                      start_date = "2005 9 30 1",
+                      end_date = "2018 10 1 1",
+                      output_file = paste(option_sets_all$output_folder[bb], "spinup65", "evergreen.sob", sep="/"),
+                      input_parameters = "-s 0.036294 359.485800 -sv 0.036294 359.485800 -gw 0.346205 0.416299",
+                      command_options = "-b -g -c -climrepeat")
+      
+      
+      # Process RHESSys output
+      if (is.null(output_variables[1]) == F){
+        select_output_variables_R(output_variables = output_variables,
+                                  output_folder =  paste(input_rhessys$output_folder, "spinup65",sep="/"),
+                                  output_filename = input_rhessys$output_filename,
+                                  run = bb,
+                                  max_run = option_sets_rhessys_rows
+        )
+      }
+      
+      #############################################################
+      ## spin up 70 
+      #############################################################
+      
+      cmd = sprintf("mv ../worldfiles/OakPatch.world.0.Y2020M10D1H1.state ../worldfiles/OakWorld.spun70")
+      system(cmd)
+      
+      print(paste("Spin up complete"))
+      
+      # for run with output
+      rhessys_command(rhessys_version = option_sets_all$rhessys_version[bb],
+                      world_file = "../worldfiles/OakWorld.spun70",
+                      world_hdr_file = "../worldfiles/OakPatch.hdr",
+                      tec_file = "../tecfiles/tec.coast",
+                      flow_file = option_sets_all$flow_file[bb],
+                      start_date = "2005 9 30 1",
+                      end_date = "2018 10 1 1",
+                      output_file = paste(option_sets_all$output_folder[bb], "spinup70", "evergreen.sob", sep="/"),
+                      input_parameters = "-s 0.036294 359.485800 -sv 0.036294 359.485800 -gw 0.346205 0.416299",
+                      command_options = "-b -g -c -climrepeat")
+      
+      
+      # Process RHESSys output
+      if (is.null(output_variables[1]) == F){
+        select_output_variables_R(output_variables = output_variables,
+                                  output_folder =  paste(input_rhessys$output_folder, "spinup70",sep="/"),
+                                  output_filename = input_rhessys$output_filename,
+                                  run = bb,
+                                  max_run = option_sets_rhessys_rows
+        )
+      }
+      
+      #############################################################
+      ## spin up 80
+      #############################################################
+      
+      cmd = sprintf("mv ../worldfiles/OakPatch.world.0.Y2030M10D1H1.state ../worldfiles/OakWorld.spun80")
+      system(cmd)
+      
+      print(paste("Spin up complete"))
+      
+      # for run with output
+      rhessys_command(rhessys_version = option_sets_all$rhessys_version[bb],
+                      world_file = "../worldfiles/OakWorld.spun80",
+                      world_hdr_file = "../worldfiles/OakPatch.hdr",
+                      tec_file = "../tecfiles/tec.coast",
+                      flow_file = option_sets_all$flow_file[bb],
+                      start_date = "2005 9 30 1",
+                      end_date = "2018 10 1 1",
+                      output_file = paste(option_sets_all$output_folder[bb], "spinup80", "evergreen.sob", sep="/"),
+                      input_parameters = "-s 0.036294 359.485800 -sv 0.036294 359.485800 -gw 0.346205 0.416299",
+                      command_options = "-b -g -c -climrepeat")
+      
+      
+      # Process RHESSys output
+      if (is.null(output_variables[1]) == F){
+        select_output_variables_R(output_variables = output_variables,
+                                  output_folder =  paste(input_rhessys$output_folder, "spinup80",sep="/"),
+                                  output_filename = input_rhessys$output_filename,
+                                  run = bb,
+                                  max_run = option_sets_rhessys_rows
+        )
+      }
+      
+      #############################################################
+      ## spin up 10
+      #############################################################
+      
+      cmd = sprintf("mv ../worldfiles/OakPatch.world.0.Y2050M10D1H1.state ../worldfiles/OakWorld.spun100")
+      system(cmd)
+      
+      print(paste("Spin up complete"))
+      
+      # for run with output
+      rhessys_command(rhessys_version = option_sets_all$rhessys_version[bb],
+                      world_file = "../worldfiles/OakWorld.spun100",
+                      world_hdr_file = "../worldfiles/OakPatch.hdr",
+                      tec_file = "../tecfiles/tec.coast",
+                      flow_file = option_sets_all$flow_file[bb],
+                      start_date = "2005 9 30 1",
+                      end_date = "2018 10 1 1",
+                      output_file = paste(option_sets_all$output_folder[bb], "spinup100", "evergreen.sob", sep="/"),
+                      input_parameters = "-s 0.036294 359.485800 -sv 0.036294 359.485800 -gw 0.346205 0.416299",
+                      command_options = "-b -g -c -climrepeat")
+      
+      
+      # Process RHESSys output
+      if (is.null(output_variables[1]) == F){
+        select_output_variables_R(output_variables = output_variables,
+                                  output_folder =  paste(input_rhessys$output_folder, "spinup100",sep="/"),
+                                  output_filename = input_rhessys$output_filename,
+                                  run = bb,
+                                  max_run = option_sets_rhessys_rows
+        )
+      }
+      
+      }
+   # }
+  )
+}
+
+  
+  
+
+
+
+
+
+
+
+
+
+
