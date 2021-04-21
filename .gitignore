@@ -6,3 +6,5 @@
 *.monthly
 *.hourly
 *.params
+worldfiles/*
+out/*
