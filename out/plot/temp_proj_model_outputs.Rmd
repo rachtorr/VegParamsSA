@@ -3,6 +3,12 @@ title: "temperature differences - proj climate model outputs"
 output: html_document
 ---
 
+## changes made:
+
+- for both def files, changed epc.topt to 12 (deg c)
+- changed epc.tcoef = 0.1 (changed from 0.2)
+
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(RHESSysIOinR)
@@ -30,9 +36,9 @@ proj_p <- rbind(proj1, proj2)
 + spin up was from 1940 - 2010 with historic climate data for downtown Santa Barbara 
 
 ```{r load, echo=F}
-
+setwd("~/Documents/patches/out/plot/")
 proj = c("hist","hot","hotter","lower")
-spec = c("pica","piun","quag","eugl","plra")
+spec = c("quag", "piun","pica","eugl","plra")
 vars = c("lai", "plantc", "plant_resp", "gpsn", "height", "precip")
 #vars = c("lai", "plantc", "gwseasonday", "lfseasonday", "gsi")
 
@@ -79,6 +85,8 @@ ggplot(rmean) + geom_boxplot(aes(x=code, y=plantc, fill=climmod)) + ggtitle("avg
 ## monthly - seasonal changes for each scenario
 rmonths <- readout1 %>% group_by(code, climmod, month) %>% summarize_at(all_of(vars), funs(mean))
 ggplot(rmonths) + geom_line(aes(x=as.factor(month), y=gpsn, col=climmod, group=climmod)) + facet_wrap('code')
+
+ggplot(rmonths) + geom_line(aes(x=as.factor(month), y=plant_resp, col=climmod, group=climmod)) + facet_wrap('code')
 
 ## yearly avg for each scenario
 ryears <- readout1 %>% group_by(code, climmod, year) %>% summarize_at(all_of(vars), funs(mean))
