@@ -8,3 +8,4 @@
 *.params
 worldfiles/*
 out/*
+*.csv
