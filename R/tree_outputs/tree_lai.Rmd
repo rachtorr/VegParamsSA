@@ -38,6 +38,7 @@ group_tree <- function(name, year=TRUE){
 
 ## load in and create df 
 trees <- list("quag","eugl","plra","piun","pica")
+#trees <- list("eugl", "plra")
 
 get_year2 <- lapply(trees, group_tree)
 dfyr2 <- do.call(rbind.data.frame, get_year2)
@@ -49,6 +50,7 @@ dfyr <- do.call(rbind.data.frame, get_year2) %>%
 # dfday <- do.call(rbind.data.frame, get_yd)
 
 ```
+
 ## Plots of model output 
 
 ```{r plots}
@@ -73,6 +75,7 @@ dfyr2 %>% ungroup() %>%
   dplyr::filter(year ==2011 | year==2014 | year==2017) %>% 
   ggplot() + geom_boxplot(aes(x=code, y=plantc, fill=as.factor(year))) + ggtitle("annual avg plantc")
 
+
 ```
 
 ## Plots of rs data and model outputs 
@@ -80,7 +83,7 @@ dfyr2 %>% ungroup() %>%
 ```{r MAdata} 
 
 # load in mikes data 
-rs_dat <- read.csv("~/Google Drive/My Drive/plant_params/data/alonzo_data_df.csv")
+rs_dat <- read.csv("~/Google Drive/My Drive/plant_params/alonzo_data_df.csv")
 rs_dat <- dplyr::filter(rs_dat, fractional_cov > 0.7)
 trees_rs <- rs_dat %>% dplyr::filter(
     class==81 | #QUAG 
@@ -88,30 +91,35 @@ trees_rs <- rs_dat %>% dplyr::filter(
     class==73 | #PIUN
     class==66 | #PICA
     class==34 ) #EUGL
+## remove outliers 
+trees_rs_rm <- trees_rs[!trees_rs %in% boxplot.stats(trees_rs$carbobperarea)$out,]
 
-ggplot(trees_rs) + geom_boxplot(aes(x=as.factor(class), y=lai, fill=as.factor(class))) + ggtitle("LAI estimates from alonzo 2016")
+ggplot(trees_rs_rm) + geom_boxplot(aes(x=as.factor(class), y=lai, fill=as.factor(class))) + ggtitle("LAI estimates from alonzo 2016")
 
-trees_rs$code <- NA
-trees_rs$code[trees_rs$class==81] <- 'quag'
-trees_rs$code[trees_rs$class==74] <- 'plra'
-trees_rs$code[trees_rs$class==73] <- 'piun'
-trees_rs$code[trees_rs$class==66] <- 'pica'
-trees_rs$code[trees_rs$class==34] <- 'eugl'
+trees_rs_rm$code <- NA
+trees_rs_rm$code[trees_rs$class==81] <- 'quag'
+trees_rs_rm$code[trees_rs$class==74] <- 'plra'
+trees_rs_rm$code[trees_rs$class==73] <- 'piun'
+trees_rs_rm$code[trees_rs$class==66] <- 'pica'
+trees_rs_rm$code[trees_rs$class==34] <- 'eugl'
 
 ggplot() +
   geom_boxplot(data=dfyr2, aes(x="model", y=lai, fill='rhessys'),position=position_dodge2(padding=0.5)) + facet_wrap('code') + 
-  geom_boxplot(data=trees_rs, aes(x="data", y=lai, fill='alonzo'), position=position_dodge2(padding = 0.5)) + facet_wrap('code') + 
+  geom_boxplot(data=trees_rs_rm, aes(x="data", y=lai, fill='alonzo'), position=position_dodge2(padding = 0.5)) + facet_wrap('code') + 
   ggtitle("compare LAI")
 
 ggplot() +
   geom_boxplot(data=dfyr2, aes(x="model", y=plantc, fill='rhessys')) + facet_wrap('code') + 
-  geom_boxplot(data=trees_rs[trees_rs$carbon<100,], aes(x="data", y=carbon, fill='alonzo')) + facet_wrap('code') + 
-  ggtitle("compare plant carbon (kgC")
+  geom_boxplot(data=trees_rs_rm, aes(x="data", y=carbobperarea, fill='alonzo')) + facet_wrap('code') + 
+  ggtitle("compare plant carbon (kgC/m^2)")
 
 # ggplot() +
-#   geom_boxplot(data=dfyr2, aes(x="model", y=lai, fill='rhessys')) + facet_wrap('code') + 
-#   geom_boxplot(data=trees_rs, aes(x="data", y=lai, fill='alonzo')) + facet_wrap('code') +
+#   geom_boxplot(data=dfyr2, aes(x="model", y=height, fill='rhessys')) + facet_wrap('code') +
+#   geom_boxplot(data=trees_rs, aes(x="data", y=height, fill='alonzo')) + facet_wrap('code') +
 #   ggtitle("compare height (m)")
+
+# ggplot() +
+#   geom_boxplot(data=dfyr2, aes(x="model", y=rootdepth, fill='rhessys')) + facet_wrap('code')
 
 ```
 
