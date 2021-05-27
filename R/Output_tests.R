@@ -5,12 +5,16 @@ library(reshape2)
 library(gridExtra)
 library(zoo)
 
-code="QUAG"
-spn = 81
+code="PICA"
+spn = 66
+p <- read.csv("evg_broadleaf_params.csv")
 
 ### load in David's data 
 vis <- read.csv("../../data/tree_and_turfgrass_monroe2_selected_weightedmeanVIs.csv")
 lai_ind <- read.csv("../../data/alonzo_data_df.csv")
+
+
+get_stats <- function(code, spn, params, plots=T){
 
 ### select species 
 quag_data <- vis %>% dplyr::filter(sp_code==code)
@@ -19,11 +23,12 @@ lai_data <- lai_ind %>% dplyr::filter(class==spn &
                                         fractional_cov>0.7)
 lai_data <- lai_data[!lai_data %in% boxplot.stats(lai_data$carbobperarea)$out,]
   
-### load in RHESSys output 
+### load in RHESSys output
+# make this if 
 quag <- readRDS(paste(tolower(code), "_outputs.rds", sep=""))
+#quag <- read.csv(paste(tolower(code), "_outputs.csv", sep=""))
 length(unique(quag$run))
 
-p <- read.csv("evg_broadleaf_params.csv")
 
 quag_mean <- quag %>% dplyr::filter(year == 2011 | year == 2014 | year ==2017) %>% 
   group_by(year, run) %>% 
@@ -47,7 +52,6 @@ timeser <- quag %>%
   geom_line(data=mean_df, aes(x=wy, y=lai, group=1), col='red') + 
   geom_line(data=stats, aes(x=wy, y=quant_first, group=1), col='blue', linetype='dashed') +
   geom_line(data=stats, aes(x=wy, y=quant_third, group=1), col='blue', linetype='dashed')
-timeser
 
 ######################################################
 ######################################################
@@ -85,25 +89,22 @@ int <- list(sd(ndvi$decline), sd(ndvi$recover))
 rh_filter <- as.data.frame(mean_yrs) %>% 
   dplyr::filter(mean_yrs$decline < mean(ndvi$decline)+int[[1]] &
                 mean_yrs$decline > mean(ndvi$decline)-int[[1]] &    mean_yrs$recover < mean(ndvi$recover)+int[[2]] &    mean_yrs$decline > mean(ndvi$recover)-int[[2]])
-nrow(rh_filter)
+filtn <- nrow(rh_filter)
 
 rh <- ggplot(rh_filter) + geom_density(aes(x=pre, col='11')) +
   geom_density(aes(x=dur, col='14')) +
   geom_density(aes(x=post, col='17')) +
   ggtitle(paste("change in LAI (n=",nrow(rh_filter),")"))
 
-grid.arrange(nd, rh)
 ################################
-tosave <- quag[quag$run %in% rh_filter$run,]
-write_rds(tosave, "quag_outputs.rds")
+# tosave <- quag[quag$run %in% rh_filter$run,]
+# write_rds(tosave, "quag_outputs.rds")
 
 rh_melt <- rh_filter %>% dplyr::select(-decline, -recover) %>% melt( id.var='run')
 
 time_rh <-ggplot(rh_melt) + geom_line(aes(x=as.factor(variable), y=value, col=as.factor(run), group=as.factor(run)), show.legend=F)
 
 time_rs <- ndvi %>% dplyr::select(-decline, -recover) %>% mutate(rown = rownames(ndvi)) %>% melt(id.var='rown') %>% ggplot() + geom_line(aes(x=variable, y=value, col=rown, group=rown), show.legend = F)
-
-grid.arrange(time_rh, time_rs)
 
 ######################################################
 ######################################################
@@ -113,64 +114,34 @@ grid.arrange(time_rh, time_rs)
 ### separate for each year 
 ### ndvi and lai
 x = nrow(quag_data)/3
-rh11 <- rh_filter %>% dplyr::select(pre) %>% sample_n(x) 
-quag11 <- cbind(rh11, nd11)
-## plot
-# ggplot(quag11) + geom_point(aes(x=pre, y=NDVI))
-
-rh14 <- rh_filter %>% dplyr::select(dur) %>% sample_n(x) 
-quag14 <- cbind(rh14, nd14)
-## plot 
-# ggplot(quag14) + geom_point(aes(x=dur, y=NDVI))
-
-rh17 <- rh_filter %>% dplyr::select(post) %>% sample_n(x) 
-quag17 <- cbind(rh17, nd17)
-## plot 
-# ggplot(quag17) + geom_point(aes(x=post, y=NDVI))
-
-## qqplot 
-qqplot(quag17$post, quag17$NDVI)
-qqnorm(rh17$post)
-
-## plot sample of parameter sets
-ggplot() + geom_density(data=rh11, aes(x=pre, col='11')) +
-  geom_density(data=rh14, aes(x=dur, col='14')) + 
-  geom_density(data=rh17, aes(x=post, col='17'))
 
 ### check % changes 
-tmp <- sample_n(rh_filter, x) 
-tmp <- rh_filter
-pre <- tmp %>% dplyr::select(decline)
-post <- tmp %>% dplyr::select(recover)
+tmp <- rh_filter %>% sample_n(x)
+pre <- tmp %>% dplyr::select(decline) 
+post <- tmp %>% dplyr::select(recover) 
 pre <- as.matrix(pre)
 post <- as.matrix(post)
-## plots
-qqnorm(pre)
-qqnorm(post)
 
 ### % changes of dlm 
 pre_rs <- (nd11$NDVI - nd14$NDVI)/nd11$NDVI
 post_rs <- (nd11$NDVI - nd17$NDVI)/nd11$NDVI
-
-qqnorm(pre_rs)
-qqnorm(post_rs)
 
 ## more plots 
 decline <- as.data.frame(cbind(model=pre, rs=pre_rs))
 recover <- as.data.frame(cbind(model=post, rs=post_rs))
 
 ## plot density of both model, data, pre and post
-ggplot() + geom_density(data=decline, aes(x=decline,col='model',linetype='pre')) +
+density_all <- ggplot() + geom_density(data=decline, aes(x=decline,col='model',linetype='pre')) +
   geom_density(data=decline, aes(x=rs,col='rs',linetype='pre')) +
-  geom_density(data=recover, aes(x=recover,col='model', linetype='post')) +
+  geom_density(data=recover, aes(x=post,col='model', linetype='post')) +
   geom_density(data=recover, aes(x=rs,col='rs', linetype='post')) 
 
 ## look at density of model only 
-ggplot() + geom_density(data=as.data.frame(pre), aes(x=decline,col='model')) +
+density_model <- ggplot() + geom_density(data=as.data.frame(pre), aes(x=decline,col='model')) +
   geom_density(data=decline, aes(x=rs,col='rs')) 
 
 ## plot boxplots of both model and data (pre)
-ggplot() + 
+boxplots_all <- ggplot() + 
   geom_boxplot(data=decline, aes(x="model-decline", y=decline, fill='model'), col='grey') + 
   geom_boxplot(data=decline, aes(x="data-decline", y=rs, fill='rs'), col='grey') +
   geom_boxplot(data=recover, aes(x="model-post", y=recover, fill='model')) +
@@ -178,12 +149,11 @@ ggplot() +
 
 ### pre is change from 2011-2014 
 ### post is change from 2011-2017
-median(pre)
-#median(pre$decline)
-median(pre_rs)
-median(post)
-#median(post$recover)
-median(post_rs)
+meds <- list(
+  mod_pre = median(pre),
+  dat_pre = median(pre_rs),
+  mod_pos = median(post), 
+  dat_pos = median(post_rs))
   
 ### t.test for whenever that seems like the next step 
 #tt  <- t.test(x=decline$model, y=decline$rs, mu=0)
@@ -191,22 +161,22 @@ median(post_rs)
 
 
 ### test: Wilcoxon rank-sum test / Mann-Whitney U for comparison of median between two independent samples
-wilcox.test(pre, pre_rs, alternative="two.sided", paired=FALSE, conf.int = T)
+wilpre <- wilcox.test(rh_filter$decline, pre_rs, alternative="two.sided", paired=FALSE, conf.int = T)
 
-wilcox.test(post, post_rs, alternative="two.sided", paired=FALSE, conf.int = T, conf.level = 0.95)
+wilpos <- wilcox.test(rh_filter$recover, post_rs, alternative="two.sided", paired=FALSE, conf.int = T, conf.level = 0.95)
 
 ## LAI 
 ## compare mean LAI in 2011 for model (pre drought conditions)
 
-ggplot(lai_data) + geom_boxplot(aes(x="data", y=lai)) +
-  geom_boxplot(data=rh_filter, aes(x="model", y=pre))
+#ggplot(lai_data) + geom_boxplot(aes(x="data", y=lai)) +
+  #geom_boxplot(data=rh_filter, aes(x="model", y=pre))
 
-ggplot(lai_data) + geom_density(aes(x=lai, col='data')) + 
-  geom_density(data=rh_filter, aes(x=pre, col='model'))
+#ggplot(lai_data) + geom_density(aes(x=lai, col='data')) + 
+  #geom_density(data=rh_filter, aes(x=pre, col='model'))
 
-wilcox.test(rh_filter$pre, lai_data$lai, alternative="two.sided", paired=FALSE, conf.int = T, conf.level = 0.95)
+#wilcox.test(rh_filter$pre, lai_data$lai, alternative="two.sided", paired=FALSE, conf.int = T, conf.level = 0.95)
 
-n=100
+n=nrow(rh_filter)
 modlai = sample_n(as.data.frame(rh_filter$pre), n)
 modlai = sort(modlai$`rh_filter$pre`)
 datlai = sample_n(as.data.frame(lai_data$lai), n)
@@ -214,11 +184,36 @@ datlai = sort(datlai$`lai_data$lai`)
 cortest = as.data.frame(cbind(model = modlai,
                         data = datlai))
 ## correlation with Kendall's tau 
-cor.test(cortest$model, cortest$data, method="kendall", alternative="two.sided")
+corr <- cor.test(cortest$model, cortest$data, method="kendall", alternative="two.sided")
 ## this is similar to a qqplot 
-ggplot(cortest) + 
+corplot <- ggplot(cortest) + 
   geom_point(aes(x=data,y=model)) +
   geom_abline(aes(slope=1, intercept=0))
+
+plotslist <- list(
+  time=timeser,
+  dens=density_all,
+  boxes=boxplots_all,
+  corplot=corplot,
+  n=filtn,
+  meds=meds,
+  pretest=wilpre,
+  posttest=wilpos,
+  laicor=corr
+)
+
+noplotslist <- list(
+  n=filtn,
+  meds=meds,
+  pretest=wilpre,
+  posttest=wilpos,
+  laicor=corr
+)
+
+toret <- noplotslist
+
+return(toret)
+}
 
 ## using Kendall's rank test for correlation 
 ## non-parametric 
