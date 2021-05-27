@@ -7,6 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(reshape2)
+library(gridExtra)
 source("../relativeresilience.R")
 ```
 
@@ -23,9 +24,14 @@ Steps taken to select the parameters were as follows:
 
 
 ```{r loadin, include=F, message=F}
-group_tree <- function(name, year=TRUE){
+group_tree <- function(name, year=TRUE, rds=F){
   
-  tbl <- read.csv(paste(name,"outputs.csv", sep="_"))
+  if(rds==T){
+    tbl <- readRDS(paste(name,"outputs.rds", sep="_"))
+  } else {
+    tbl <- read.csv(paste(name, "outputs.csv", sep="_"))
+  }
+  
   
   if(year==T){
     tmp <- tbl %>% group_by(year, run) %>% summarize_at(vars(lai, plantc), funs(mean)) %>% mutate(code=name)
@@ -37,15 +43,18 @@ group_tree <- function(name, year=TRUE){
 }
 
 ## load in and create df 
-trees <- list("quag","eugl","plra","piun","pica")
-#trees <- list("eugl", "plra")
+trees1 <- list("eugl","plra")
+get_year1 <- lapply(trees1, group_tree)
+dfyr1 <- do.call(rbind.data.frame, get_year1)
 
-get_year2 <- lapply(trees, group_tree)
-dfyr2 <- do.call(rbind.data.frame, get_year2)
+trees2 <- list("quag","piun","pica")
+get_year2 <- lapply(trees2, group_tree, rds=T)
+dfyr22 <- do.call(rbind.data.frame, get_year2)
 
-dfyr <- do.call(rbind.data.frame, get_year2) %>% 
+dfyr <- rbind(dfyr1, dfyr22) %>% 
   group_by(year, code) %>% summarize_all(funs(mean))
 
+dfyr2 <- rbind(dfyr1, dfyr22)
 # get_yd <- lapply(trees, group_tree, year=FALSE)
 # dfday <- do.call(rbind.data.frame, get_yd)
 
@@ -83,7 +92,7 @@ dfyr2 %>% ungroup() %>%
 ```{r MAdata} 
 
 # load in mikes data 
-rs_dat <- read.csv("~/Google Drive/My Drive/plant_params/alonzo_data_df.csv")
+rs_dat <- read.csv("../../data/alonzo_data_df.csv")
 rs_dat <- dplyr::filter(rs_dat, fractional_cov > 0.7)
 trees_rs <- rs_dat %>% dplyr::filter(
     class==81 | #QUAG 
@@ -92,7 +101,7 @@ trees_rs <- rs_dat %>% dplyr::filter(
     class==66 | #PICA
     class==34 ) #EUGL
 ## remove outliers 
-trees_rs_rm <- trees_rs[!trees_rs %in% boxplot.stats(trees_rs$carbobperarea)$out,]
+trees_rs_rm <- trees_rs[!trees_rs %in% boxplot.stats(trees_rs$carbon)$out,]
 
 ggplot(trees_rs_rm) + geom_boxplot(aes(x=as.factor(class), y=lai, fill=as.factor(class))) + ggtitle("LAI estimates from alonzo 2016")
 
@@ -110,7 +119,7 @@ ggplot() +
 
 ggplot() +
   geom_boxplot(data=dfyr2, aes(x="model", y=plantc, fill='rhessys')) + facet_wrap('code') + 
-  geom_boxplot(data=trees_rs_rm, aes(x="data", y=carbobperarea, fill='alonzo')) + facet_wrap('code') + 
+  geom_boxplot(data=trees_rs_rm, aes(x="data", y=carbon, fill='alonzo')) + facet_wrap('code', scales='free') + 
   ggtitle("compare plant carbon (kgC/m^2)")
 
 # ggplot() +
@@ -127,7 +136,8 @@ ggplot() +
 
 ```{r DMdata}
 # load in David's data 
-vis <- read.csv("/Volumes/GoogleDrive/My Drive/plant_params/DM_data/tree_and_turfgrass_monroe2_selected_weightedmeanVIs.csv")
+#vis <- read.csv("/Volumes/GoogleDrive/My Drive/plant_params/DM_data/tree_and_turfgrass_monroe2_selected_weightedmeanVIs.csv")
+vis <- read.csv("../../data/tree_and_turfgrass_monroe2_selected_weightedmeanVIs.csv")
 
 trees_vi <- vis %>% dplyr::filter(sp_class==81|
                                     sp_class==74|
@@ -141,6 +151,40 @@ rh_dens <- dfyr2 %>% ungroup() %>%
   ggplot() + geom_density(aes(x=lai,  col=as.factor(year))) + facet_wrap("code")
 
 grid.arrange(vi_dens, rh_dens)
+
+model_pc <- dfyr2 %>% ungroup() %>%
+  dplyr::filter(year ==2011 | year==2014 | year==2017) %>% 
+  pivot_wider(values_from=lai, names_from=year,  id_cols=c(run,code)) %>%
+  mutate(decline = (`2014`-`2011`)/`2011`) %>% 
+  mutate(recover = (`2017`-`2011`)/`2011`) %>%
+  mutate(data="rhessys LAI") %>%
+  dplyr::select(ID = run, sp_code=code, decline, recover, data)
+model_pc$sp_code = toupper(model_pc$sp_code)
+
+index_pc <- trees_vi %>% 
+  dplyr::filter(year ==2011 | year==2014 | year==2017) %>% 
+  pivot_wider(values_from=NDVI, names_from=year,  id_cols=c(ID,sp_code)) %>%
+  mutate(decline = (`2014`-`2011`)/`2011`) %>% 
+  mutate(recover = (`2017`-`2011`)/`2011`) %>% 
+  mutate(data="NDVI") %>% 
+  dplyr::select(-`2011`, -`2014`, -`2017`)
+
+perc_changes <- rbind(model_pc, index_pc)
+
+dec <- ggplot(perc_changes) + 
+  geom_boxplot(aes(x=sp_code, y=decline, fill=data))
+
+rec <- ggplot(perc_changes) + 
+  geom_boxplot(aes(x=sp_code, y=recover, fill=data))
+
+perc_changes %>% 
+  pivot_longer(cols=c(decline, recover), names_to="change", values_to="perc_diff") %>% 
+  ggplot() + 
+  geom_hline(aes(yintercept=0), linetype="dashed") + 
+  geom_boxplot(aes(x=change, y=perc_diff, col=data), fill='grey') + 
+  facet_wrap('sp_code') + 
+  theme_bw() + theme(legend.position="top") + 
+  labs(y="percent difference to 2011 values") 
 
 ```
 
@@ -213,12 +257,12 @@ rrplot
 
 ```{r params}
 p_dec <- read.csv("decid_params.csv")
-p_ev <- read.csv("evg_broadleaf_params.csv")
-p_con <- read.csv("pica_conifer_params.csv")
+p_ev <- readRDS("evg_broadleaf_params.rds")
+p_con <- readRDS("pica_conifer_params.rds")
 
 p_dec2 <- cbind(p_dec[,15:54], p_dec$code)
-p_ev2 <- cbind(p_ev[,15:54], p_ev$code)
-p_con2 <- cbind(p_con[,15:54], p_con$code)
+p_ev2 <- cbind(p_ev[,14:53], p_ev$code)
+p_con2 <- cbind(p_con[,14:53], p_con$code)
 
 p_names <- c(
       "pore_size_index",
@@ -272,13 +316,17 @@ all_p <- rbind(p_dec2, p_ev2, p_con2)
 
 ggplot(all_p) + geom_boxplot(aes(x=as.factor(code), y=epc.proj_sla, fill=as.factor(code))) + ggtitle("proj_sla")
 
-ggplot(all_p) + geom_boxplot(aes(x=as.factor(code), y=epc.leaf_cn, fill=as.factor(code))) + ggtitle("leaf_cn")
+ggplot(all_p) + geom_boxplot(aes(x=as.factor(code), y=epc.leaf_turnover, fill=as.factor(code))) + ggtitle("leaf_turnover")
 
 ggplot(all_p) + geom_boxplot(aes(x=as.factor(code), y=epc.waring_pa, fill=as.factor(code))) + ggtitle("waring_pa")
 
+ggplot(all_p) + geom_boxplot(aes(x=as.factor(code), y=epc.waring_pb, fill=as.factor(code))) + ggtitle("waring_pb")
+
 ggplot(all_p) + geom_boxplot(aes(x=as.factor(code), y=epc.branch_turnover, fill=as.factor(code))) + ggtitle("branch_turnover")
 
-ggplot(all_p) + geom_boxplot(aes(x=as.factor(code), y=epc.leaf_turnover, fill=as.factor(code))) + ggtitle("leaf_turnover")
+ggplot(all_p) + geom_boxplot(aes(x=as.factor(code), y=epc.froot_turnover, fill=as.factor(code))) + ggtitle("froot_turnover")
+
+ggplot(all_p) + geom_boxplot(aes(x=as.factor(code), y=epc.root_distrib_parm, fill=as.factor(code))) + ggtitle("root distrib")
 
 comb <- left_join(dfyr2, all_p, by=c('code','run')) %>%
   dplyr::filter(year==2011 | year==2014 | year==2017) %>% 
