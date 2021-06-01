@@ -5,12 +5,12 @@ library(reshape2)
 library(gridExtra)
 library(zoo)
 
-code="PICA"
-spn = 66
+code="EUGL"
+spn = 34
 p <- read.csv("evg_broadleaf_params.csv")
 
 ### load in David's data 
-vis <- read.csv("../../data/tree_and_turfgrass_monroe2_selected_weightedmeanVIs.csv")
+vis <- read.csv("/Volumes/GoogleDrive/My Drive/plant_params/DM_data/tree_and_turfgrass_monroe2_selected_weightedmeanVIs.csv")
 lai_ind <- read.csv("../../data/alonzo_data_df.csv")
 
 

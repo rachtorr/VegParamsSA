@@ -8,8 +8,9 @@ knitr::opts_chunk$set(echo = TRUE)
 library(RHESSysIOinR)
 library(tidyverse)
 library(data.table)
+library(patchwork)
 source("../../R/readin_selected_vars.R")
-source("~/climatefiles/mkwy.R")
+source("~/Documents/GitHub/climfiles/mkwy.R")
 source("../../R/relativeresilience.R")
 
 library(wesanderson)
@@ -23,7 +24,7 @@ ColsVec<- c(climpal[2], climpal[1], climpal[3], climpal[4])
 ## organize and compare rhessys model outputs 
 
 ```{r load, echo=F}
-setwd("~/VegParamsSA/out/plot/")
+setwd("~/Documents/patches/out/plot")
 proj = c("hist","hot","hotter","lower")
 spec = c("quag", "piun","pica","eugl","plra")
 vars = c("lai", "plantc", "plant_resp", "gpsn", "height", "cpool", "trans", "precip", "resp")
@@ -116,7 +117,7 @@ res %>%
   group_by(year, climmod) %>% 
   summarize_at(vars(npp), list(median)) %>% 
   ggplot() + 
-  geom_col(data=annp, aes(x=as.factor(year), y=precip/500), fill='grey', alpha=0.5) + 
+  geom_col(data=annp, aes(x=as.factor(wy), y=precip/500), fill='grey', alpha=0.5) + 
   geom_line(aes(x=as.factor(year), y=npp, col=climmod, group=climmod)) +
   #facet_wrap("code")+
   labs(x='water year', y='NPP[kgC/m^2]', title="annual NPP") +
@@ -141,7 +142,7 @@ res %>%
     ggplot() + 
   geom_boxplot(aes(x=as.factor(year), y=nppr, col=climmod), fill='grey', show.legend=T, outlier.shape = NA) +
   ggtitle("NPP resistance") + geom_hline(aes(yintercept=1), linetype='dashed') +
-  coord_cartesian(ylim = c(-1, 2)) + 
+  coord_cartesian(ylim = c(-1.5, 3)) + 
     theme_bw() + theme(text = element_text(size=10), plot.title = element_text(size = 11), legend.position = "top") +
   facet_wrap('code') + 
     xlab('drought year') 
@@ -159,7 +160,6 @@ res %>%
 
 ```{r carbon}
 
-source("~/RHESSysIOinR/R/mkdate.R")
 readout <- mkdate(readout)
 
 readout_yd <- readout %>% 
@@ -190,36 +190,35 @@ gpplot <- readout_yd %>%
   theme(legend.position="top") + facet_grid(cflux ~ dyear)
 
 
-gpplot_dec <- readout_yd %>%
-  dplyr::filter(phys=="decid") %>% 
-  pivot_longer(cols = c(gpsn, resp, npp), names_to="cflux") %>%
-  ggplot() + 
-  geom_line(aes(x=yd, y=value, col=climmod)) +
-  geom_hline(aes(yintercept=0, linetype=cflux), show.legend=F) + 
-  ggtitle("Avg. daily carbon fluxes across all veg. parameters [kgC/m^2]") +
-  theme_bw() + labs(x="", y="GPSN") +
-  theme(legend.position="top") + facet_grid(cflux ~ dyear)
+# gpplot_dec <- readout_yd %>%
+#   dplyr::filter(phys=="decid") %>% 
+#   pivot_longer(cols = c(gpsn, resp, npp), names_to="cflux") %>%
+#   ggplot() + 
+#   geom_line(aes(x=yd, y=value, col=climmod)) +
+#   geom_hline(aes(yintercept=0, linetype=cflux), show.legend=F) + 
+#   ggtitle("Avg. daily carbon fluxes across all veg. parameters [kgC/m^2]") +
+#   theme_bw() + labs(x="", y="GPSN") +
+#   theme(legend.position="top") + facet_grid(cflux ~ dyear)
 
-gpplot_eb <- readout_yd %>%
-  dplyr::filter(phys=="evg" & leaf=="broad") %>% 
-  pivot_longer(cols = c(gpsn, resp, npp), names_to="cflux") %>%
-  ggplot() + 
-  geom_line(aes(x=yd, y=value, col=climmod)) +
-  geom_hline(aes(yintercept=0, linetype=cflux), show.legend=F) + 
-  ggtitle("Avg. daily carbon fluxes across all veg. parameters [kgC/m^2]") +
-  theme_bw() + labs(x="", y="GPSN") +
-  theme(legend.position="top") + facet_grid(cflux ~ dyear)
+# gpplot_eb <- readout_yd %>%
+#   dplyr::filter(phys=="evg" & leaf=="broad") %>% 
+#   pivot_longer(cols = c(gpsn, resp, npp), names_to="cflux") %>%
+#   ggplot() + 
+#   geom_line(aes(x=yd, y=value, col=climmod)) +
+#   geom_hline(aes(yintercept=0, linetype=cflux), show.legend=F) + 
+#   ggtitle("Avg. daily carbon fluxes across all veg. parameters [kgC/m^2]") +
+#   theme_bw() + labs(x="", y="GPSN") +
+#   theme(legend.position="top") + facet_grid(cflux ~ dyear)
 
 gpplot_en <- readout_yd %>%
-   
-  pivot_longer(cols = c(gpsn, resp, npp), names_to="cflux") %>%
+  #pivot_longer(cols = c(gpsn, resp, npp), names_to="cflux") %>%
   ggplot() + 
-  geom_line(aes(x=yd, y=value, col=climmod)) +
-  geom_hline(aes(yintercept=0, linetype=cflux), show.legend=F) + 
+  geom_line(aes(x=yd, y=npp, col=climmod)) +
+  geom_hline(aes(yintercept=0), show.legend=F) + 
   ggtitle("Avg. daily carbon fluxes across all veg. parameters [kgC/m^2]") +
   theme_bw() + labs(x="", y="GPSN") +
-  theme(legend.position="top") + facet_grid(cflux ~ dyear)
-
+  theme(legend.position="top") + facet_grid(code ~ dyear)
+gpplot_en
 
 
 
@@ -282,32 +281,32 @@ nppplot2 <- npdf %>%
   scale_x_discrete(guide = guide_axis(check.overlap = TRUE)) 
 
 
-nppplot3 <- npdf %>% 
-  dplyr::filter(wy < 2018) %>%
-  group_by(wy, climmod, phys, leaf) %>% 
-  summarize_at(vars(npp), list(median)) %>% 
-  ggplot() + 
-  geom_col(data=annp, aes(x=as.factor(wy), y=precip/1000), fill='grey', alpha=0.5) +
-  geom_line(aes(x=as.factor(wy), npp, col=climmod, group=climmod), show.legend=T) + 
-  facet_wrap(phys~leaf) + 
-  theme_bw() + labs(x="water year", y="gC/m^2", title = "med. annual NPP") + 
-  scale_color_manual(values=ColsVec) + 
-  theme(axis.text.x = element_text(size=11, angle=60)) +
-  scale_x_discrete(guide = guide_axis(check.overlap = TRUE)) 
+# nppplot3 <- npdf %>% 
+#   dplyr::filter(wy < 2018) %>%
+#   group_by(wy, climmod, phys, leaf) %>% 
+#   summarize_at(vars(npp), list(median)) %>% 
+#   ggplot() + 
+#   geom_col(data=annp, aes(x=as.factor(wy), y=precip/1000), fill='grey', alpha=0.5) +
+#   geom_line(aes(x=as.factor(wy), npp, col=climmod, group=climmod), show.legend=T) + 
+#   facet_wrap(phys~leaf) + 
+#   theme_bw() + labs(x="water year", y="gC/m^2", title = "med. annual NPP") + 
+#   scale_color_manual(values=ColsVec) + 
+#   theme(axis.text.x = element_text(size=11, angle=60)) +
+#   scale_x_discrete(guide = guide_axis(check.overlap = TRUE)) 
 
 
 
-nppplot4 <- npdf %>% 
-  dplyr::filter(wy < 2018) %>%
-  group_by(wy, climmod, phys, leaf) %>% 
-  summarize_at(vars(npp, gpsn, resp), list(median)) %>% 
-  ggplot() + 
-  #geom_col(data=annp, aes(x=as.factor(wy), y=precip), fill='grey', alpha=0.5) +
-  geom_line(aes(x=as.factor(wy), gpsn, col=climmod, group=climmod), show.legend=T) + 
-  facet_wrap(phys~leaf) + 
-  theme_bw() + labs(x="water year", y="GPSN", title = "med. annual GPSN") + 
-  theme(axis.text.x = element_text(size=11, angle=60)) +
-  scale_x_discrete(guide = guide_axis(check.overlap = TRUE))
+# nppplot4 <- npdf %>% 
+#   dplyr::filter(wy < 2018) %>%
+#   group_by(wy, climmod, phys, leaf) %>% 
+#   summarize_at(vars(npp, gpsn, resp), list(median)) %>% 
+#   ggplot() + 
+#   #geom_col(data=annp, aes(x=as.factor(wy), y=precip), fill='grey', alpha=0.5) +
+#   geom_line(aes(x=as.factor(wy), gpsn, col=climmod, group=climmod), show.legend=T) + 
+#   facet_wrap(phys~leaf) + 
+#   theme_bw() + labs(x="water year", y="GPSN", title = "med. annual GPSN") + 
+#   theme(axis.text.x = element_text(size=11, angle=60)) +
+#   scale_x_discrete(guide = guide_axis(check.overlap = TRUE))
 
 nppplot5 <- npdf %>% 
   dplyr::filter(wy < 2018) %>%
@@ -320,7 +319,7 @@ nppplot5 <- npdf %>%
   theme_bw() + labs(x="water year", y="kgC/m^2", title = "med. annual npp") + 
   theme(axis.text.x = element_text(size=11, angle=60)) +
   scale_x_discrete(guide = guide_axis(check.overlap = TRUE))
-
+nppplot5
 
 
 
@@ -375,5 +374,207 @@ ggplot(topres) +
   facet_wrap('metric', scales="free_x" ) + 
   theme(text = element_text(size = 14)) + 
   coord_flip() + theme_bw()
+
+```
+
+
+```{r table}
+library(gt)
+library(glue)
+
+totable <- topres %>%
+  dplyr::filter(metric=="pre-drought LAI") %>%
+    dplyr::select(-bias, -`std. error`, -metric) %>%
+  pivot_wider(id_cols = c(param, rank), values_from = c(original,"min. c.i.", "max. c.i."), names_from=c(tree)) %>%
+  mutate(ci_dec = paste("[",round(`min. c.i._dec`,2),",", round(`max. c.i._dec`,2),"]", sep=""),
+         ci_evg = paste("[",round(`min. c.i._dec`,2),",", round(`max. c.i._dec`,2),"]", sep="")
+         ) %>%
+  dplyr::select(-`min. c.i._dec`, -`max. c.i._dec`,
+                -`min. c.i._evg`, -`max. c.i._evg`)
+
+
+totable %>% 
+  gt(rowname_col = 'param') %>%
+  tab_header(
+    title = "Sobol sensitivity analysis orders",
+    subtitle = glue::glue("pre-drought LAI")
+  ) %>%
+  tab_spanner(
+    label="Evergreen",
+    columns = c(original_evg, ci_evg)
+  ) %>%
+  tab_spanner(
+    label="Deciduous",
+    columns = c(original_dec, ci_dec)
+  ) %>%
+  tab_row_group(
+    label="soil",
+    rows='pore_size_index'
+  ) %>%
+  tab_row_group(
+    label="carbon allocation",
+    rows=c('epc.alloc_stemc_leafc', 'epc.waring_pa', 'epc.waring_pb')
+  ) %>%
+  tab_row_group(
+    label="turnover rates",
+    rows=c('epc.branch_turnover', 'epc.leaf_turnover')
+  ) %>%
+  tab_row_group(
+    label="leaf property",
+    rows='epc.proj_sla'
+  ) %>%
+  fmt_number(
+    columns = c(original_dec, original_evg)
+  ) 
+
+
+
+
+totable2 <- topres %>%
+  dplyr::filter(metric=="LAI resilience") %>%
+    dplyr::select(-bias, -`std. error`, -metric) %>%
+  pivot_wider(id_cols = c(param, rank), values_from = c(original,"min. c.i.", "max. c.i."), names_from=c(tree)) %>%
+  mutate(ci_dec = paste("[",round(`min. c.i._dec`,2),",", round(`max. c.i._dec`,2),"]", sep=""),
+         ci_evg = paste("[",round(`min. c.i._dec`,2),",", round(`max. c.i._dec`,2),"]", sep="")
+         ) %>%
+  dplyr::select(-`min. c.i._dec`, -`max. c.i._dec`,
+                -`min. c.i._evg`, -`max. c.i._evg`)
+
+totable2 %>% 
+  gt(rowname_col = 'param') %>%
+  tab_header(
+    title = "Sobol sensitivity analysis orders",
+    subtitle = glue::glue("LAI Resilience")
+  ) %>%
+  tab_spanner(
+    label="Evergreen",
+    columns = c(original_evg, ci_evg)
+  ) %>%
+  tab_spanner(
+    label="Deciduous",
+    columns = c(original_dec, ci_dec)
+  ) %>%
+  tab_row_group(
+    label="soil",
+    rows=c('pore_size_index','psi_air_entry')
+  ) %>%
+  tab_row_group(
+    label="carbon allocation and photosynthesis",
+    rows=c('epc.netpabs_sunlit', 'epc.storage_transfer_prop', 'epc.waring_pb')
+  ) %>%
+  tab_row_group(
+    label="turnover rates",
+    rows=c('epc.branch_turnover', 'epc.froot_turnover')
+  ) %>%
+  tab_row_group(
+    label="tree property",
+    rows='epc.root_distrib_parm'
+  ) %>%
+  fmt_number(
+    columns = c(original_dec, original_evg)
+  ) 
+
+```
+should there be a threshold for the indices so that there's not low values in the table? would it depend on first or total, or both? 
+
+
+calculate changes in peak npp to negative npp for each species and climate. use Day of center of mass - so 50% of it happens before and 50% after 
+
+```{r days}
+
+readout_yd <- readout %>% 
+  mutate(dyear = ifelse(wy==2011 | wy==2017, "wet", "drought")) %>%
+  group_by(yd, climmod, dyear, code) %>%
+  summarize_at(vars(gpsn, resp, npp, trans), list(median))
+
+prac <- readout_yd %>% 
+  dplyr::filter(climmod=="hot" & code=="quag" & dyear=="drought")
+
+# can just sum it up and find the day
+# need to get cumulative npp
+gethalf <- function(yd, npp){
+  
+  df <- data.frame(npp=npp, yd=yd)
+  #df <- dplyr::filter(df, npp>0)
+  df$sumnpp = cumsum(abs(df$npp))
+  last=length(df$npp)
+  int = df$sumnpp[last]
+  
+  halfsum=int/2
+  ydhalf = df$yd[df$sumnpp>=halfsum]
+  ydhalfn = df$yd[df$sumnpp>=halfsum-1 & df$sumnpp<=halfsum+1]
+  
+  day50 <- ydhalf[1]
+  
+  return(list(int=int, half=day50))
+}
+
+gethalf(yd=prac$yd, npp=prac$npp)
+
+tmp <- readout_yd %>% group_by(code, climmod, dyear) %>%
+  summarise(halfnpp=gethalf(yd=yd, npp=npp)$int,
+              ydnpp=gethalf(yd=yd, npp=npp)$half)
+
+ggplot(tmp) + geom_point(aes(x=ydnpp, y=halfnpp, col=climmod, shape=dyear)) + facet_grid('code')
+
+tmp2 <- readout %>% 
+  mutate(dyear = ifelse(wy==2011 | wy==2017, "wet", "drought")) %>%
+  group_by(climmod, dyear, code, run) %>%
+  summarise(halfnpp=gethalf(yd=yd, npp=npp)$int,
+              ydnpp=gethalf(yd=yd, npp=npp)$half)
+ggplot(tmp2) + geom_boxplot(aes(x=climmod, y=halfnpp, col=dyear)) + facet_wrap('code') + labs(y="gC/m^2", title="net annual NPP")
+ggplot(tmp2) + geom_boxplot(aes(x=climmod, y=ydnpp, col=dyear)) + facet_wrap('code') + labs(y="day of year", title="day when 50% net annual NPP")
+
+tmp_summary <- tmp2 %>% 
+  group_by(code, climmod, dyear) %>% 
+  summarise(
+    medianday = median(ydnpp),
+    mediannpp = median(halfnpp),
+    highday = quantile(ydnpp, 0.95),
+    highnpp = quantile(halfnpp, 0.95),
+    lowday = quantile(ydnpp, 0.05),
+    lownpp = quantile(halfnpp, 0.05))
+  
+
+ggplot(tmp_summary) +
+  geom_hline(aes(yintercept=0)) + 
+  geom_pointrange(aes(x=medianday, xmin=lowday, xmax=highday, y=mediannpp, ymin=lownpp, ymax=highnpp, col=climmod,  shape=dyear)) + theme_bw() +
+  facet_grid('code')
+ 
+
+# read Ryan's NPP Grass phenology paper again too about this
+
+library(Bolstad2)
+# practice integer 
+# even though telling it same points as yd, it randomly does it
+int <- sintegral(x=prac$yd, fx=prac$npp, n.pts = length(prac$yd))
+# turn output into df 
+int_df <- data.frame(x=int$x, fx=int$y)
+cum_npp <- ggplot(int_df) + geom_line(aes(x=x, y=fx))
+yd_npp <- ggplot(prac) + geom_line(aes(x=yd, y=npp))
+grid.arrange(cum_npp, yd_npp)
+
+# get year day ( or close to)
+half = 0.5*int_df$fx[366]
+greater_than_half <- int_df$x[int_df$fx>half]
+day = round(greater_than_half[1])
+
+grid.arrange(cum_npp, yd_npp + geom_vline(aes(xintercept=day, col='center')))
+
+int <- prac %>% dplyr::filter(npp>0)
+pos <- cumsum(int$npp)
+int$sum = pos
+cum_npp <- ggplot(int) + geom_line(aes(x=yd, y=sum))
+yd_npp <- ggplot(prac) + geom_line(aes(x=yd, y=npp))
+grid.arrange(cum_npp, yd_npp)
+half = 0.5*int$sum[nrow(int)]
+day <- round(int_df$x[int_df$fx>half][1])
+grid.arrange(cum_npp, yd_npp + geom_vline(aes(xintercept=day, col='center')))
+## can also check out the auc() function with the 'MESS' package
+# library(MESS)
+# test_auc <- auc(x=prac$yd, y=prac$npp, type='spline', from=0, to=366, rule=2)
+
+
+
 
 ```
