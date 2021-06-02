@@ -22,7 +22,14 @@ ColsVec<- c(climpal[2], climpal[1], climpal[3], climpal[4])
 
 ## compare model output with data 
 
-load in figures here
+not sure if these plots are necessary, can describe the process and results 
+
+but if keeping, should include number of parameter sets for each tree sp
+
+![](../plots/compare_LAI.png) 
+</br>
+![](../plots/compare_leaf_changes.png) 
+
 
 main rhessys outputs:
 
@@ -159,8 +166,22 @@ res %>%
     theme_bw() + theme(text = element_text(size=10), plot.title = element_text(size = 11), legend.position = "top") +
   facet_wrap('code')
 
+yrng <- range(res$resilience)
+res %>% 
+  dplyr::filter(year > 2011 & year < 2018) %>% 
+    ggplot() + 
+  geom_rect(aes(NULL, NULL, xmin=as.factor(2016), xmax=as.factor(2018), ymin=yrng[1], ymax=yrng[2]), fill='grey') + 
+  geom_hline(aes(yintercept=1)) +
+  geom_boxplot(aes(x=as.factor(year), y=resilience, col=climmod), show.legend=T) + #ggtitle("resistence = (drought LAI)/(pre-drought LAI)") + geom_hline(aes(yintercept=1), linetype='dashed') +
+    theme_bw() + theme(text = element_text(size=10), plot.title = element_text(size = 11), legend.position = "top") +
+  scale_color_manual(values = ColsVec) +
+  facet_wrap('code') + 
+    xlab('drought year') 
 
 ```
+</br>
+above plot includes resistance years 2012-2016 and resilience in 2017, which is meant to be shaded to differentiate. Both are ratios of the 2011 LAI. Wasn't quite able to get the shading right but the idea is there I think.
+
 
 ## Annual and seasonal changes in carbon fluxes
 
