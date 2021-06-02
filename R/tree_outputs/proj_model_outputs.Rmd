@@ -4,7 +4,8 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+"../../../"
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 library(RHESSysIOinR)
 library(tidyverse)
 library(data.table)
@@ -19,9 +20,23 @@ ColsVec<- c(climpal[2], climpal[1], climpal[3], climpal[4])
 
 ```
 
-## load in climates to show differences 
+## compare model output with data 
 
-## organize and compare rhessys model outputs 
+load in figures here
+
+main rhessys outputs:
+
+* bd gpsn	Gross Photosynthesis gC/m2
+* bd resp _ Respiration	gC/m2
+* npp = gpsn - resp 
+* LAI 
+* transpiration 
+
+</br>
+
+## Resistance and resilience to drought 
+
+ratio to pre-drought LAI and NPP in 2011 during and after (2017) drought 
 
 ```{r load, echo=F}
 setwd("~/Documents/patches/out/plot")
@@ -56,9 +71,6 @@ readout$climmod[readout$climmod=="lower"] <- "cooler"
 
 ```
 
-bd gpsn	Gross Photosynthesis	kgC/m2
-bd resp _ Respiration_	kgC/m2
-bdg plant_resp	Plant Maintenance Respiration	mC/m2
 
 
 ```{r resilience}
@@ -75,32 +87,32 @@ res <- res %>% group_by(run, code, climmod) %>%
   mutate(resilience = lai/lai[year==2011]) %>%
   mutate(nppr = npp/npp[year==2011])
 
-by_code <- res %>% 
-  dplyr::filter(year == 2017) %>% 
-  ggplot() + geom_boxplot(aes(x=code, y=resilience, fill=code), show.legend=F) + ggtitle("resilience = (post-drought LAI)/(pre-drought LAI)") + geom_hline(aes(yintercept=1), linetype='dashed') +
-  theme_bw() + theme(text = element_text(size=10), plot.title = element_text(size = 11)) + facet_wrap('climmod') +
-  xlab('species code') 
-
-by_clim <- res %>% 
-    dplyr::filter(year == 2017) %>% 
-    ggplot() + geom_boxplot(aes(x=climmod, y=resilience, fill=climmod), show.legend=T) + ggtitle("resilience = (post-drought LAI)/(pre-drought LAI)") + geom_hline(aes(yintercept=1), linetype='dashed') +
-    theme_bw() + theme(text = element_text(size=10), plot.title = element_text(size = 11), legend.position = "top") + facet_wrap('code') +
-    xlab('temp. scenario') 
+# by_code <- res %>% 
+#   dplyr::filter(year == 2017) %>% 
+#   ggplot() + geom_boxplot(aes(x=code, y=resilience, fill=code), show.legend=F) + ggtitle("resilience = (post-drought LAI)/(pre-drought LAI)") + geom_hline(aes(yintercept=1), linetype='dashed') +
+#   theme_bw() + theme(text = element_text(size=10), plot.title = element_text(size = 11)) + facet_wrap('climmod') +
+#   xlab('species code') 
+# 
+# by_clim <- res %>% 
+#     dplyr::filter(year == 2017) %>% 
+#     ggplot() + geom_boxplot(aes(x=climmod, y=resilience, fill=climmod), show.legend=T) + ggtitle("resilience = (post-drought LAI)/(pre-drought LAI)") + geom_hline(aes(yintercept=1), linetype='dashed') +
+#     theme_bw() + theme(text = element_text(size=10), plot.title = element_text(size = 11), legend.position = "top") + facet_wrap('code') +
+#     xlab('temp. scenario') 
 
 by_both <- res %>% 
     dplyr::filter(year == 2017) %>% 
     ggplot() + geom_boxplot(aes(x=code, y=resilience, col=climmod), show.legend=T, fill="grey") + 
-  #ggtitle("resilience = (post-drought LAI)/(pre-drought LAI)") + geom_hline(aes(yintercept=1), linetype='dashed') +
+  ggtitle("resilience = (post-drought LAI)/(pre-drought LAI)") + geom_hline(aes(yintercept=1), linetype='dashed') +
   scale_color_manual(values = ColsVec) + 
-  
     theme_bw() + theme(text = element_text(size=10), plot.title = element_text(size = 11), legend.position = "top") +
     xlab('species code') 
+by_both
 
-by_both_resist <- res %>% 
-    dplyr::filter(year == 2014) %>% 
-    ggplot() + geom_boxplot(aes(x=code, y=resilience, fill=climmod), show.legend=T) + geom_hline(aes(yintercept=1), linetype='dashed') +
-    theme_bw() + theme(text = element_text(size=10), plot.title = element_text(size = 11), legend.position = "top") +
-    xlab('species code') 
+# by_both_resist <- res %>% 
+#     dplyr::filter(year == 2014) %>% 
+#     ggplot() + geom_boxplot(aes(x=code, y=resilience, fill=climmod), show.legend=T) + geom_hline(aes(yintercept=1), linetype='dashed') +
+#     theme_bw() + theme(text = element_text(size=10), plot.title = element_text(size = 11), legend.position = "top") +
+#     xlab('species code') 
 
 resist_timeser <- res %>% 
   dplyr::filter(year > 2011 & year < 2017) %>% 
@@ -111,19 +123,19 @@ resist_timeser <- res %>%
   scale_color_manual(values = ColsVec) +
   facet_wrap('code') + 
     xlab('drought year') 
+resist_timeser
 
-
-res %>% 
-  group_by(year, climmod) %>% 
-  summarize_at(vars(npp), list(median)) %>% 
-  ggplot() + 
-  geom_col(data=annp, aes(x=as.factor(wy), y=precip/500), fill='grey', alpha=0.5) + 
-  geom_line(aes(x=as.factor(year), y=npp, col=climmod, group=climmod)) +
-  #facet_wrap("code")+
-  labs(x='water year', y='NPP[kgC/m^2]', title="annual NPP") +
-  theme(axis.text.x = element_text(size=9, angle=60)) +
-  scale_x_discrete(guide = guide_axis(check.overlap = TRUE)) +
-  theme_bw()
+# res %>% 
+#   group_by(year, climmod) %>% 
+#   summarize_at(vars(npp), list(median)) %>% 
+#   ggplot() + 
+#   geom_col(data=annp, aes(x=as.factor(wy), y=precip/500), fill='grey', alpha=0.5) + 
+#   geom_line(aes(x=as.factor(year), y=npp, col=climmod, group=climmod)) +
+#   #facet_wrap("code")+
+#   labs(x='water year', y='NPP[kgC/m^2]', title="annual NPP") +
+#   theme(axis.text.x = element_text(size=9, angle=60)) +
+#   scale_x_discrete(guide = guide_axis(check.overlap = TRUE)) +
+#   theme_bw()
 
 
 nppresil <- res %>% 
@@ -131,29 +143,55 @@ nppresil <- res %>%
   ggplot() + 
   geom_hline(aes(yintercept=1)) + 
   geom_boxplot(aes(x=code, y=nppr, fill=climmod), show.legend=T, outlier.shape=NA) + 
-  coord_cartesian(ylim = c(-1, 2)) + 
-  ggtitle("resilience = (post-drought net NPP)/(pre-drought net NPP)") +
+  coord_cartesian(ylim = c(-2, 3)) + 
+  ggtitle("resilience = (post-drought net NPP)/(pre-drought net NPP)") + labs(subtitle = "outliers removed") +
   scale_fill_manual(values=ColsVec) + 
   theme_bw() + theme(text = element_text(size=10), plot.title = element_text(size = 11)) + ylab("resilience")
-  
+nppresil  
 
 res %>% 
   dplyr::filter(year > 2011 & year < 2017) %>% 
     ggplot() + 
   geom_boxplot(aes(x=as.factor(year), y=nppr, col=climmod), fill='grey', show.legend=T, outlier.shape = NA) +
-  ggtitle("NPP resistance") + geom_hline(aes(yintercept=1), linetype='dashed') +
-  coord_cartesian(ylim = c(-1.5, 3)) + 
+  scale_color_manual(values=ColsVec) + 
+  labs(title="NPP resistance", subtitle="outliers removed", y="resistance", x="drought year") + geom_hline(aes(yintercept=1), linetype='dashed') +
+   coord_cartesian(ylim = c(-7, 5)) + 
     theme_bw() + theme(text = element_text(size=10), plot.title = element_text(size = 11), legend.position = "top") +
-  facet_wrap('code') + 
-    xlab('drought year') 
+  facet_wrap('code')
 
 
 ```
 
-```{r temp, echo=F}
+## Annual and seasonal changes in carbon fluxes
 
+```{r water}
+water <- readout %>% 
+  group_by(wy, climmod, code, run) %>% 
+  summarize_at(vars(trans, npp), list(sum)) %>% 
+  group_by(wy, climmod) %>% 
+  summarize_at(vars(trans, npp), list(median))
 
-# see temp_proj_model_outputs.Rmd, climscen chunk for plot code
+transplot1 <- water %>% 
+  dplyr::filter(wy<2018) %>% 
+  ggplot() + 
+  geom_col(data=annp, aes(x=wy, y=precip), fill='grey', alpha=0.5) + 
+  geom_line(aes(x=wy, y=trans, col=climmod)) + 
+  scale_color_manual(values=ColsVec) + 
+  theme_bw() +
+  theme(legend.position = 'top') +
+  labs(y = "transpiration [mm]", x="water year")
+ 
+
+nppplot1 <- water %>% 
+  dplyr::filter(wy < 2018) %>%
+  mutate(npp = npp/1000) %>%
+  ggplot() + 
+  geom_col(data=annp, aes(x=wy, y=precip/1000), fill='grey', alpha=0.5) +
+  geom_line(aes(x=wy, npp, col=climmod, group=climmod), show.legend=F) + 
+  scale_color_manual(values=ColsVec) + 
+  theme_bw() + labs(x="water year", y="NPP [gC/m^2]")
+
+transplot1 / nppplot1
 
 ```
 
@@ -188,7 +226,7 @@ gpplot <- readout_yd %>%
   ggtitle("median daily carbon fluxes across all veg. parameters") +
   theme_bw() + labs(x="day of year", y="kgC/m^2") +
   theme(legend.position="top") + facet_grid(cflux ~ dyear)
-
+gpplot
 
 # gpplot_dec <- readout_yd %>%
 #   dplyr::filter(phys=="decid") %>% 
@@ -218,116 +256,18 @@ gpplot_en <- readout_yd %>%
   ggtitle("Avg. daily carbon fluxes across all veg. parameters [kgC/m^2]") +
   theme_bw() + labs(x="", y="GPSN") +
   theme(legend.position="top") + facet_grid(code ~ dyear)
-gpplot_en
 
 
 
 ```
 
-```{r water}
-water <- readout %>% 
-  group_by(wy, climmod, code, run) %>% 
-  summarize_at(vars(trans, npp), list(sum)) %>% 
-  group_by(wy, climmod) %>% 
-  summarize_at(vars(trans, npp), list(median))
+## Sensitivity Analysis results
 
-transplot1 <- water %>% 
-  dplyr::filter(wy<2018) %>% 
-  ggplot() + 
-  geom_col(data=annp, aes(x=wy, y=precip), fill='grey', alpha=0.5) + 
-  geom_line(aes(x=wy, y=trans, col=climmod)) + 
-  scale_color_manual(values=ColsVec) + 
-  theme_bw() +
-  theme(legend.position = 'top') +
-  labs(y = "transpiration [mm]", x="water year")
- 
+should there be a threshold for the indices so that there's not low values in the table? would it depend on first or total, or both? 
 
-nppplot1 <- water %>% 
-  dplyr::filter(wy < 2018) %>%
-  mutate(npp = npp/1000) %>%
-  ggplot() + 
-  geom_col(data=annp, aes(x=wy, y=precip/1000), fill='grey', alpha=0.5) +
-  geom_line(aes(x=wy, npp, col=climmod, group=climmod), show.legend=F) + 
-  scale_color_manual(values=ColsVec) + 
-  theme_bw() + labs(x="water year", y="NPP [gC/m^2]")
-
-transplot1 / nppplot1
-
-```
-
-
-```{r npp}
-
-npdf <- readout %>% 
-  mutate(npp=npp/1000) %>% 
-  #mutate(phys = ifelse(code=="plra"|code=="eugl","decid","evg")) %>%
-  #mutate(leaf = ifelse(code=="pica", "needle","broad")) %>% 
-  
-  group_by(wy, climmod, run, code) %>% 
-  summarize_at(vars(npp, gpsn, resp), list(sum))
-
-
-nppplot2 <- npdf %>% 
-  dplyr::filter(wy < 2018) %>%
-  group_by(wy, climmod, code) %>% 
-  summarize_at(vars(npp), list(median)) %>% 
-  ggplot() + 
-  geom_col(data=annp, aes(x=as.factor(wy), y=precip/500), fill='grey', alpha=0.5) +
-  geom_line(aes(x=as.factor(wy), npp, col=climmod, group=climmod), show.legend=T) + 
-  facet_wrap('code', scales='free') + 
-  theme_bw() + labs(x="water year", y="NPP", title = "med. annual NPP") + 
-  scale_color_manual(values=ColsVec) + 
-  theme(axis.text.x = element_text(size=11, angle=60)) +
-  scale_x_discrete(guide = guide_axis(check.overlap = TRUE)) 
-
-
-# nppplot3 <- npdf %>% 
-#   dplyr::filter(wy < 2018) %>%
-#   group_by(wy, climmod, phys, leaf) %>% 
-#   summarize_at(vars(npp), list(median)) %>% 
-#   ggplot() + 
-#   geom_col(data=annp, aes(x=as.factor(wy), y=precip/1000), fill='grey', alpha=0.5) +
-#   geom_line(aes(x=as.factor(wy), npp, col=climmod, group=climmod), show.legend=T) + 
-#   facet_wrap(phys~leaf) + 
-#   theme_bw() + labs(x="water year", y="gC/m^2", title = "med. annual NPP") + 
-#   scale_color_manual(values=ColsVec) + 
-#   theme(axis.text.x = element_text(size=11, angle=60)) +
-#   scale_x_discrete(guide = guide_axis(check.overlap = TRUE)) 
-
-
-
-# nppplot4 <- npdf %>% 
-#   dplyr::filter(wy < 2018) %>%
-#   group_by(wy, climmod, phys, leaf) %>% 
-#   summarize_at(vars(npp, gpsn, resp), list(median)) %>% 
-#   ggplot() + 
-#   #geom_col(data=annp, aes(x=as.factor(wy), y=precip), fill='grey', alpha=0.5) +
-#   geom_line(aes(x=as.factor(wy), gpsn, col=climmod, group=climmod), show.legend=T) + 
-#   facet_wrap(phys~leaf) + 
-#   theme_bw() + labs(x="water year", y="GPSN", title = "med. annual GPSN") + 
-#   theme(axis.text.x = element_text(size=11, angle=60)) +
-#   scale_x_discrete(guide = guide_axis(check.overlap = TRUE))
-
-nppplot5 <- npdf %>% 
-  dplyr::filter(wy < 2018) %>%
-  group_by(wy, climmod, code) %>% 
-  summarize_at(vars(npp, gpsn, resp), list(median)) %>% 
-  ggplot() + 
-  #geom_col(data=annp, aes(x=as.factor(wy), y=precip), fill='grey', alpha=0.5) +
-  geom_line(aes(x=as.factor(wy), npp, col=climmod, group=climmod), show.legend=T) + 
-  facet_wrap('code', nrow=1) + 
-  theme_bw() + labs(x="water year", y="kgC/m^2", title = "med. annual npp") + 
-  theme(axis.text.x = element_text(size=11, angle=60)) +
-  scale_x_discrete(guide = guide_axis(check.overlap = TRUE))
-nppplot5
-
-
-
-
-```
-
-
-```{r sa_plots}
+```{r table}
+library(gt)
+library(glue)
 
 dec_lai <- readRDS("../sobol/sens_lai_results.rds") %>% mutate(tree="dec", 
                                                                metric="pre-drought LAI")
@@ -362,26 +302,6 @@ tmp2 <- tmp %>% dplyr::select(
 
 topres = rbind(test, tmp2)
 
-ggplot(topres) + 
-  geom_hline(aes(yintercept=0), alpha=0.75) +
-  geom_pointrange(aes(x=param, 
-                      y=original, 
-                      ymin=`min. c.i.`, 
-                      ymax=`max. c.i.`, 
-                      shape=rank, 
-                      col=tree), 
-                  position = position_dodge2(width = 0.5, padding = 0.5), fatten=5) + 
-  facet_wrap('metric', scales="free_x" ) + 
-  theme(text = element_text(size = 14)) + 
-  coord_flip() + theme_bw()
-
-```
-
-
-```{r table}
-library(gt)
-library(glue)
-
 totable <- topres %>%
   dplyr::filter(metric=="pre-drought LAI") %>%
     dplyr::select(-bias, -`std. error`, -metric) %>%
@@ -396,7 +316,7 @@ totable <- topres %>%
 totable %>% 
   gt(rowname_col = 'param') %>%
   tab_header(
-    title = "Sobol sensitivity analysis orders",
+    title = "Sobol sensitivity analysis",
     subtitle = glue::glue("pre-drought LAI")
   ) %>%
   tab_spanner(
@@ -443,7 +363,7 @@ totable2 <- topres %>%
 totable2 %>% 
   gt(rowname_col = 'param') %>%
   tab_header(
-    title = "Sobol sensitivity analysis orders",
+    title = "Sobol sensitivity analysis",
     subtitle = glue::glue("LAI Resilience")
   ) %>%
   tab_spanner(
@@ -475,10 +395,105 @@ totable2 %>%
   ) 
 
 ```
-should there be a threshold for the indices so that there's not low values in the table? would it depend on first or total, or both? 
 
+
+## Supplementary plots 
+
+```{r npp}
+
+npdf <- readout %>% 
+  mutate(npp=npp/1000) %>% 
+  #mutate(phys = ifelse(code=="plra"|code=="eugl","decid","evg")) %>%
+  #mutate(leaf = ifelse(code=="pica", "needle","broad")) %>%
+  group_by(wy, climmod, run, code) %>% 
+  summarize_at(vars(npp, gpsn, resp), list(sum))
+
+
+nppplot2 <- npdf %>% 
+  dplyr::filter(wy < 2018) %>%
+  group_by(wy, climmod, code) %>% 
+  summarize_at(vars(npp), list(median)) %>% 
+  ggplot() + 
+  geom_col(data=annp, aes(x=as.factor(wy), y=precip/500), fill='grey', alpha=0.5) +
+  geom_line(aes(x=as.factor(wy), npp, col=climmod, group=climmod), show.legend=T) + 
+  facet_wrap('code', ncol=5) + 
+  theme_bw() + labs(x="water year", y="NPP", title = "med. annual NPP") + 
+  scale_color_manual(values=ColsVec) + 
+  theme(axis.text.x = element_text(size=11, angle=60)) +
+  scale_x_discrete(guide = guide_axis(check.overlap = TRUE)) 
+nppplot2
+
+# nppplot3 <- npdf %>% 
+#   dplyr::filter(wy < 2018) %>%
+#   group_by(wy, climmod, phys, leaf) %>% 
+#   summarize_at(vars(npp), list(median)) %>% 
+#   ggplot() + 
+#   geom_col(data=annp, aes(x=as.factor(wy), y=precip/1000), fill='grey', alpha=0.5) +
+#   geom_line(aes(x=as.factor(wy), npp, col=climmod, group=climmod), show.legend=T) + 
+#   facet_wrap(phys~leaf) + 
+#   theme_bw() + labs(x="water year", y="gC/m^2", title = "med. annual NPP") + 
+#   scale_color_manual(values=ColsVec) + 
+#   theme(axis.text.x = element_text(size=11, angle=60)) +
+#   scale_x_discrete(guide = guide_axis(check.overlap = TRUE)) 
+
+
+
+# nppplot4 <- npdf %>% 
+#   dplyr::filter(wy < 2018) %>%
+#   group_by(wy, climmod, phys, leaf) %>% 
+#   summarize_at(vars(npp, gpsn, resp), list(median)) %>% 
+#   ggplot() + 
+#   #geom_col(data=annp, aes(x=as.factor(wy), y=precip), fill='grey', alpha=0.5) +
+#   geom_line(aes(x=as.factor(wy), gpsn, col=climmod, group=climmod), show.legend=T) + 
+#   facet_wrap(phys~leaf) + 
+#   theme_bw() + labs(x="water year", y="GPSN", title = "med. annual GPSN") + 
+#   theme(axis.text.x = element_text(size=11, angle=60)) +
+#   scale_x_discrete(guide = guide_axis(check.overlap = TRUE))
+
+nppplot5 <- npdf %>% 
+  dplyr::filter(wy < 2018) %>%
+  group_by(wy, climmod, code) %>% 
+  summarize_at(vars(npp, gpsn, resp), list(median)) %>% 
+  ggplot() + 
+  #geom_col(data=annp, aes(x=as.factor(wy), y=precip), fill='grey', alpha=0.5) +
+  geom_line(aes(x=as.factor(wy), npp, col=climmod, group=climmod), show.legend=T) + 
+  facet_wrap('code', nrow=1) + 
+  theme_bw() + labs(x="water year", y="kgC/m^2", title = "med. annual npp") + 
+  theme(axis.text.x = element_text(size=11, angle=60)) +
+  scale_x_discrete(guide = guide_axis(check.overlap = TRUE))
+
+
+
+
+
+```
+
+
+```{r sa_plots}
+
+ggplot(topres) + 
+  geom_hline(aes(yintercept=0), alpha=0.75) +
+  geom_pointrange(aes(x=param, 
+                      y=original, 
+                      ymin=`min. c.i.`, 
+                      ymax=`max. c.i.`, 
+                      shape=rank, 
+                      col=tree), 
+                  position = position_dodge2(width = 0.5, padding = 0.5), fatten=5) + 
+  facet_wrap('metric', scales="free_x" ) + 
+  theme(text = element_text(size = 14)) + 
+  coord_flip() + theme_bw()
+
+```
+
+
+# Species differences in NPP shifts during drought years
 
 calculate changes in peak npp to negative npp for each species and climate. use Day of center of mass - so 50% of it happens before and 50% after 
+
+- with taking center of mass of GPSN 
+
+- trying to do the same with NPP
 
 ```{r days}
 
@@ -502,8 +517,6 @@ gethalf <- function(yd, npp){
   
   halfsum=int/2
   ydhalf = df$yd[df$sumnpp>=halfsum]
-  ydhalfn = df$yd[df$sumnpp>=halfsum-1 & df$sumnpp<=halfsum+1]
-  
   day50 <- ydhalf[1]
   
   return(list(int=int, half=day50))
@@ -512,18 +525,19 @@ gethalf <- function(yd, npp){
 gethalf(yd=prac$yd, npp=prac$npp)
 
 tmp <- readout_yd %>% group_by(code, climmod, dyear) %>%
-  summarise(halfnpp=gethalf(yd=yd, npp=npp)$int,
-              ydnpp=gethalf(yd=yd, npp=npp)$half)
+  summarise(halfnpp=gethalf(yd=yd, npp=gpsn)$int,
+              ydnpp=gethalf(yd=yd, npp=gpsn)$half)
 
-ggplot(tmp) + geom_point(aes(x=ydnpp, y=halfnpp, col=climmod, shape=dyear)) + facet_grid('code')
+ggplot(tmp) + geom_point(aes(x=ydnpp, y=halfnpp, col=climmod, shape=dyear)) + facet_grid('code') + labs(title="grouped gpsn", y="median half annual gpsn", x="day where half is reached")
 
 tmp2 <- readout %>% 
   mutate(dyear = ifelse(wy==2011 | wy==2017, "wet", "drought")) %>%
-  group_by(climmod, dyear, code, run) %>%
-  summarise(halfnpp=gethalf(yd=yd, npp=npp)$int,
-              ydnpp=gethalf(yd=yd, npp=npp)$half)
-ggplot(tmp2) + geom_boxplot(aes(x=climmod, y=halfnpp, col=dyear)) + facet_wrap('code') + labs(y="gC/m^2", title="net annual NPP")
-ggplot(tmp2) + geom_boxplot(aes(x=climmod, y=ydnpp, col=dyear)) + facet_wrap('code') + labs(y="day of year", title="day when 50% net annual NPP")
+  group_by(climmod, dyear, code, run, wy) %>%
+  summarise(halfnpp=gethalf(yd=yd, npp=gpsn)$int,
+              ydnpp=gethalf(yd=yd, npp=gpsn)$half)
+
+ggplot(tmp2) + geom_boxplot(aes(x=climmod, y=halfnpp*2, col=dyear)) + facet_wrap('code') + labs(y="gC/m^2", title="net annual GPSN")
+ggplot(tmp2) + geom_boxplot(aes(x=climmod, y=ydnpp, col=dyear)) + facet_wrap('code') + labs(y="day of year", title="day when 50% net annual GPSN")
 
 tmp_summary <- tmp2 %>% 
   group_by(code, climmod, dyear) %>% 
@@ -539,7 +553,7 @@ tmp_summary <- tmp2 %>%
 ggplot(tmp_summary) +
   geom_hline(aes(yintercept=0)) + 
   geom_pointrange(aes(x=medianday, xmin=lowday, xmax=highday, y=mediannpp, ymin=lownpp, ymax=highnpp, col=climmod,  shape=dyear)) + theme_bw() +
-  facet_grid('code')
+  facet_grid('code') + ggtitle("50% gpsn - summarized by day first, not by median")
  
 
 # read Ryan's NPP Grass phenology paper again too about this
