@@ -1,0 +1,369 @@
+---
+title: "proj climate model outputs"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+"../../../"
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+library(RHESSysIOinR)
+library(tidyverse)
+library(data.table)
+library(patchwork)
+source("../../R/readin_selected_vars.R")
+source("~/climatefiles/mkwy.R")
+source("../../R/relativeresilience.R")
+
+library(wesanderson)
+climpal <- wes_palette("FantasticFox1", 5, type = "discrete")[2:5]
+ColsVec<- c(climpal[2], climpal[1], climpal[3], climpal[4])
+
+```
+
+## compare model output with data 
+
+![](../plots/compare_leaf_changes.png) 
+</br>
+Have to re-do this graph from tree_lai.Rmd on Bachata - include all trees, similar to the resil_timeser and npp_timeser plots below.. for symmetry we want 2x6 plot, maybe include the precip above it or below using the patchwork formatting 
+
+main rhessys outputs:
+
+* bd gpsn	Gross Photosynthesis gC/m2
+* bd resp _ Respiration	gC/m2
+* npp = gpsn - resp 
+* LAI 
+* transpiration 
+
+</br>
+
+## Resistance and resilience to drought 
+
+ratio to pre-drought LAI and NPP in 2011 during and after (2017) drought 
+
+```{r load, echo=F, eval=T}
+setwd("~/VegParamsSA/out/plot")
+proj = c("hist","hot","hotter","lower")
+spec = c("quag", "piun","pica","eugl","plra")
+vars = c("lai", "plantc", "plant_resp", "gpsn", "height", "cpool", "trans", "precip", "resp")
+#vars = c("lai", "plantc", "gwseasonday", "lfseasonday", "gsi")
+
+
+
+readout = matrix(ncol=17)
+for(i in 1:length(proj)){
+  for(j in 1:length(spec)){
+    df <- readin_selected_vars(vars = vars,
+                                dir = paste(proj[i],
+                                            spec[j],
+                                            "allsim",
+                                            sep="/")) %>%
+      mutate(code = spec[j], 
+             climmod = proj[i])
+    
+    colnames(readout) <- colnames(df)
+    readout = rbind(readout,df)
+  }
+}
+
+readout <- readout[-1,]
+readout$date = as.Date(paste(readout$year, readout$month, readout$day, sep="-"))
+readout <- mkwy(readout) %>% mutate(npp = gpsn-resp) %>% dplyr::select(-variable) 
+
+readout$climmod[readout$climmod=="lower"] <- "cooler"
+
+```
+
+
+
+```{r resilience, eval=T}
+
+annp <- readout %>% dplyr::filter(code=="quag" & run==1 & climmod=="hist") %>%
+  group_by(wy) %>% 
+  summarize_at(vars(precip), list(sum)) %>%
+  dplyr::filter(wy < 2018)
+
+res <- readout %>% dplyr::filter(year < 2018) %>% 
+  group_by(year, run, code, climmod) %>% 
+  summarize(lai = mean(lai), npp=mean(npp)) 
+res <- res %>% group_by(run, code, climmod) %>% 
+  mutate(resilience = lai/lai[year==2011]) %>%
+  mutate(nppr = npp/npp[year==2011])
+
+all_trees <- res %>% dplyr::select(year, climmod, resilience, nppr, lai, npp)  
+all_trees$code <- "all trees"
+
+
+npp_timeser <- rbind(all_trees, res) %>%  
+  dplyr::filter(year > 2011 & year < 2018) %>% 
+    ggplot() + 
+  geom_vline(aes(xintercept=as.factor(2017)), size=6, col='grey') + 
+  geom_hline(aes(yintercept=1), linetype='dashed') +
+  geom_boxplot(aes(x=as.factor(year), y=nppr, col=climmod), show.legend=T, outlier.shape = NA) +
+  scale_color_manual(values=ColsVec) + 
+  labs(title="NPP resistance (2012-2016) and resilience (2017)", subtitle="outliers removed", y="ratio to 2011", x="year") + 
+   coord_cartesian(ylim = c(-8, 5)) + 
+    theme_bw() + theme(text = element_text(size=10), plot.title = element_text(size = 11), legend.position = "top") +
+  facet_wrap('code', scales='free')
+
+resist_timeser <-  rbind(all_trees, res) %>% 
+  dplyr::filter(year > 2011 & year < 2018) %>% 
+  ungroup() %>% 
+    ggplot() + 
+  geom_vline(aes(xintercept=as.factor(2017)), size=6, col='grey') + 
+  geom_hline(aes(yintercept=1), linetype='dashed') +
+  geom_boxplot(aes(x=as.factor(year), y=resilience, col=climmod), show.legend=T) + 
+  theme_bw() + theme(text = element_text(size=10), plot.title = element_text(size = 11), legend.position = "top") +
+  scale_color_manual(values = ColsVec) +
+  theme(axis.text.x = element_text(size=11, angle=60)) +
+  scale_x_discrete(guide = guide_axis(check.overlap = TRUE)) +
+  facet_wrap('code') +
+  labs(title="LAI resistance (2012-2016) and resilience (2017)", 
+          y="ratio to 2011", x= "year")
+
+resist_timeser
+npp_timeser
+
+```
+</br>
+above plot includes resistance years 2012-2016 and resilience in 2017, which is meant to be shaded to differentiate. Both are ratios of the 2011 LAI. 
+
+
+```{r carbon, eval=T}
+
+readout <- mkdate(readout)
+
+readout_yd <- readout %>% 
+  mutate(dyear = ifelse(wy==2011 | wy==2017, "wet", "drought")) %>%
+  mutate(phys = ifelse(code=="plra"|code=="eugl","decid","evg")) %>%
+  mutate(leaf = ifelse(code=="pica", "needle","broad")) %>% 
+  group_by(yd, climmod, dyear, code) %>%
+  summarize_at(vars(gpsn, resp, npp, trans), list(median))
+
+
+readout_mo <- readout %>% 
+  mutate(dyear = ifelse(wy==2011 | wy==2017, "wet", "drought")) %>%
+  group_by(month, climmod, dyear, code) %>%
+  summarize_at(vars(gpsn, resp, npp, trans), list(median))
+
+
+gpplot <- readout_yd %>%
+  group_by(yd, climmod, dyear) %>%
+  summarize_at(vars(gpsn, resp, npp), list(median)) %>%
+  pivot_longer(cols = c(gpsn, resp, npp), names_to="cflux") %>%
+  mutate(cflux = factor(cflux, levels=c("gpsn","resp","npp"))) %>% 
+  ggplot() + 
+  geom_line(aes(x=yd, y=value, col=climmod)) +
+  geom_hline(aes(yintercept=0, linetype=cflux), show.legend=F) + 
+  scale_color_manual(values=ColsVec) + 
+  ggtitle("median daily carbon fluxes across all veg. parameters") +
+  theme_bw() + labs(x="day of year", y="kgC/m^2") +
+  theme(legend.position="top") + facet_grid(cflux ~ dyear)
+gpplot
+
+
+```
+
+## Sensitivity Analysis results
+
+created nicer tables in Excel that make more sense 
+
+will have short descriptions of each parameter, what it does in the model as well...
+
+```{r table}
+library(gt)
+library(glue)
+
+dec_lai <- readRDS("../sobol/sens_lai_results.rds") %>% mutate(tree="dec", 
+                                                               metric="pre-drought LAI")
+dec_res <- readRDS("../sobol/sens_res_results.rds") %>% mutate(tree="dec",
+                                                               metric="LAI resilience")
+evg_lai <- readRDS("../sobol/sens_lai_results_evg.rds") %>% mutate(tree="evg",
+                                                                   metric="pre-drought LAI")
+evg_res <- readRDS("../sobol/sens_res_results_evg.rds") %>% mutate(tree="evg",
+                                                                   metric="LAI resilience")
+
+allres <- rbind(dec_lai, dec_res, evg_lai, evg_res)
+
+test <- allres %>% 
+  dplyr::filter(rank=="T") %>% 
+  group_by(tree, metric) %>% 
+  arrange(-original) %>% 
+  slice(1:5)
+
+test_S = allres %>% 
+  dplyr::filter(rank=="S") 
+
+tmp <- left_join(test, test_S, by=c("param","tree","metric"))  
+tmp2 <- tmp %>% dplyr::select(
+  param, tree, metric,
+  original=original.y,
+  bias=bias.y,
+  `std. error` = `std. error.y`,
+  `min. c.i.` = `min. c.i..y`,
+  `max. c.i.` = `max. c.i..y`,
+  rank = rank.y)
+
+
+topres = rbind(test, tmp2)
+
+totable <- topres %>%
+  dplyr::filter(metric=="pre-drought LAI") %>%
+    dplyr::select(-bias, -`std. error`, -metric) %>%
+  pivot_wider(id_cols = c(param, rank), values_from = c(original,"min. c.i.", "max. c.i."), names_from=c(tree)) %>%
+  mutate(ci_dec = paste("[",round(`min. c.i._dec`,2),",", round(`max. c.i._dec`,2),"]", sep=""),
+         ci_evg = paste("[",round(`min. c.i._evg`,2),",", round(`max. c.i._evg`,2),"]", sep="")
+         ) %>%
+  dplyr::select(-`min. c.i._dec`, -`max. c.i._dec`,
+                -`min. c.i._evg`, -`max. c.i._evg`)
+
+
+totable %>% 
+  gt(rowname_col = 'param') %>%
+  tab_header(
+    title = "Sobol sensitivity analysis",
+    subtitle = glue::glue("pre-drought LAI")
+  ) %>%
+  tab_spanner(
+    label="Evergreen",
+    columns = c(original_evg, ci_evg)
+  ) %>%
+  tab_spanner(
+    label="Deciduous",
+    columns = c(original_dec, ci_dec)
+  ) %>%
+  tab_row_group(
+    label="soil",
+    rows='pore_size_index'
+  ) %>%
+  tab_row_group(
+    label="carbon allocation",
+    rows=c('epc.alloc_stemc_leafc', 'epc.waring_pa', 'epc.waring_pb')
+  ) %>%
+  tab_row_group(
+    label="turnover rates",
+    rows=c('epc.branch_turnover', 'epc.leaf_turnover')
+  ) %>%
+  tab_row_group(
+    label="leaf property",
+    rows='epc.proj_sla')
+  # ) %>%
+  # fmt_number(
+  #   columns = c(original_dec, original_evg)
+  # ) 
+
+
+
+
+totable2 <- topres %>%
+  dplyr::filter(metric=="LAI resilience") %>%
+    dplyr::select(-bias, -`std. error`, -metric) %>%
+  pivot_wider(id_cols = c(param, rank), values_from = c(original,"min. c.i.", "max. c.i."), names_from=c(tree)) %>%
+  mutate(ci_dec = paste("[",round(`min. c.i._dec`,2),",", round(`max. c.i._dec`,2),"]", sep=""),
+         ci_evg = paste("[",round(`min. c.i._evg`,2),",", round(`max. c.i._evg`,2),"]", sep="")
+         ) %>%
+  dplyr::select(-`min. c.i._dec`, -`max. c.i._dec`,
+                -`min. c.i._evg`, -`max. c.i._evg`)
+
+totable2 %>% 
+  gt(rowname_col = 'param') %>%
+  tab_header(
+    title = "Sobol sensitivity analysis",
+    subtitle = glue::glue("LAI Resilience")
+  ) %>%
+  tab_spanner(
+    label="Evergreen",
+    columns = c(original_evg, ci_evg)
+  ) %>%
+  tab_spanner(
+    label="Deciduous",
+    columns = c(original_dec, ci_dec)
+  ) %>%
+  tab_row_group(
+    label="soil",
+    rows=c('pore_size_index','psi_air_entry')
+  ) %>%
+  tab_row_group(
+    label="carbon allocation and photosynthesis",
+    rows=c('epc.netpabs_sunlit', 'epc.storage_transfer_prop', 'epc.waring_pb')
+  ) %>%
+  tab_row_group(
+    label="turnover rates",
+    rows=c('epc.branch_turnover', 'epc.froot_turnover')
+  ) %>%
+  tab_row_group(
+    label="tree property",
+    rows='epc.root_distrib_parm'
+  )# %>%
+  #fmt_number(
+  #  columns = c(original_dec, original_evg, decimals=2)
+  #) 
+
+```
+
+![Table of pre-drought LAI Sobol results](predroughtLAI_SA_table.png) 
+</br>
+![Table of LAI resilience Sobol results](LAIresil_SA_table.png)
+
+# Species differences in NPP shifts during drought years
+
+calculate changes in peak npp to negative npp for each species and climate. use Day of center of mass - so 50% of it happens before and 50% after 
+
+- with taking center of mass of GPSN 
+
+
+```{r days, eval=T}
+
+readout_yd <- readout %>% 
+  mutate(dyear = ifelse(wy==2011 | wy==2017, "wet", "drought")) %>%
+  group_by(yd, climmod, dyear, code) %>%
+  summarize_at(vars(gpsn, resp, npp, trans), list(median))
+
+prac <- readout_yd %>% 
+  dplyr::filter(climmod=="hot" & code=="quag" & dyear=="drought")
+
+# can just sum it up and find the day
+# need to get cumulative npp
+gethalf <- function(yd, npp){
+  
+  df <- data.frame(npp=npp, yd=yd)
+  #df <- dplyr::filter(df, npp>0)
+  df$sumnpp = cumsum(abs(df$npp))
+  last=length(df$npp)
+  int = df$sumnpp[last]
+  
+  halfsum=int/2
+  ydhalf = df$yd[df$sumnpp>=halfsum]
+  day50 <- ydhalf[1]
+  
+  return(list(int=int, half=day50))
+}
+
+tmp2 <- readout %>% 
+  mutate(dyear = ifelse(wy==2011 | wy==2017, "wet", "drought")) %>%
+  group_by(climmod, dyear, code, run, wy) %>%
+  summarise(halfnpp=gethalf(yd=yd, npp=gpsn)$int,
+              ydnpp=gethalf(yd=yd, npp=gpsn)$half)
+
+# ggplot(tmp2) + geom_boxplot(aes(x=climmod, y=halfnpp*2, col=dyear)) + facet_wrap('code') + labs(y="gC/m^2", title="net annual GPSN")
+# ggplot(tmp2) + geom_boxplot(aes(x=climmod, y=ydnpp, col=dyear)) + facet_wrap('code') + labs(y="day of year", title="day when 50% net annual GPSN")
+
+tmp_summary <- tmp2 %>% 
+  group_by(code, climmod, dyear) %>% 
+  summarise(
+    medianday = median(ydnpp),
+    mediannpp = median(halfnpp),
+    highday = quantile(ydnpp, 0.95),
+    highnpp = quantile(halfnpp, 0.95),
+    lowday = quantile(ydnpp, 0.05),
+    lownpp = quantile(halfnpp, 0.05))
+  
+
+ggplot(tmp_summary) +
+  geom_hline(aes(yintercept=0)) + 
+  geom_pointrange(aes(x=medianday, xmin=lowday, xmax=highday, y=mediannpp, ymin=lownpp, ymax=highnpp, col=climmod,  shape=dyear)) + theme_bw() +
+  scale_color_manual(values=ColsVec) + 
+  facet_grid('code') + 
+  ggtitle("50% gpsn - summarized by day first, not by median")
+ 
+
+```
