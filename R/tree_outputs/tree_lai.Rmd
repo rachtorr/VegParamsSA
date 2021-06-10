@@ -43,11 +43,11 @@ group_tree <- function(name, year=TRUE, rds=F){
 }
 
 ## load in and create df 
-trees1 <- list("eugl","plra")
+trees1 <- list("plra")
 get_year1 <- lapply(trees1, group_tree)
 dfyr1 <- do.call(rbind.data.frame, get_year1)
 
-trees2 <- list("quag","piun","pica")
+trees2 <- list("quag","piun","pica", "eugl")
 get_year2 <- lapply(trees2, group_tree, rds=T)
 dfyr22 <- do.call(rbind.data.frame, get_year2)
 
@@ -112,9 +112,15 @@ trees_rs_rm$code[trees_rs$class==73] <- 'piun'
 trees_rs_rm$code[trees_rs$class==66] <- 'pica'
 trees_rs_rm$code[trees_rs$class==34] <- 'eugl'
 
-ggplot() +
-  geom_boxplot(data=dfyr2, aes(x="model", y=lai, fill='rhessys'),position=position_dodge2(padding=0.5)) + facet_wrap('code') + 
-  geom_boxplot(data=trees_rs_rm, aes(x="data", y=lai, fill='alonzo'), position=position_dodge2(padding = 0.5)) + facet_wrap('code') + 
+compare_lai <- rbind(dfyr2 %>% 
+        dplyr::filter(year==2011) %>% 
+        dplyr::select(lai, code) %>% 
+        mutate(data="rhessys"),
+      trees_rs_rm %>%
+        dplyr::select(lai, code) %>% 
+        mutate(data="data"))
+lai_box <- ggplot(compare_lai) +
+  geom_boxplot(aes(x=code, y=lai, col=data),position=position_dodge2(padding=0.5), fill='grey') + theme_bw() +
   ggtitle("compare LAI")
 
 ggplot() +
@@ -155,30 +161,30 @@ grid.arrange(vi_dens, rh_dens)
 model_pc <- dfyr2 %>% ungroup() %>%
   dplyr::filter(year ==2011 | year==2014 | year==2017) %>% 
   pivot_wider(values_from=lai, names_from=year,  id_cols=c(run,code)) %>%
-  mutate(decline = (`2014`-`2011`)/`2011`) %>% 
-  mutate(recover = (`2017`-`2011`)/`2011`) %>%
+  mutate(`2014` = (`2014`-`2011`)/`2011`) %>% 
+  mutate(`2017` = (`2017`-`2011`)/`2011`) %>%
   mutate(data="rhessys LAI") %>%
-  dplyr::select(ID = run, sp_code=code, decline, recover, data)
+  dplyr::select(ID = run, sp_code=code, `2014`,`2017`, data)
 model_pc$sp_code = toupper(model_pc$sp_code)
 
 index_pc <- trees_vi %>% 
   dplyr::filter(year ==2011 | year==2014 | year==2017) %>% 
   pivot_wider(values_from=NDVI, names_from=year,  id_cols=c(ID,sp_code)) %>%
-  mutate(decline = (`2014`-`2011`)/`2011`) %>% 
-  mutate(recover = (`2017`-`2011`)/`2011`) %>% 
+  mutate(`2014` = (`2014`-`2011`)/`2011`) %>% 
+  mutate(`2017` = (`2017`-`2011`)/`2011`) %>% 
   mutate(data="NDVI") %>% 
-  dplyr::select(-`2011`, -`2014`, -`2017`)
+  dplyr::select(-`2011`)
 
 perc_changes <- rbind(model_pc, index_pc)
 
 dec <- ggplot(perc_changes) + 
-  geom_boxplot(aes(x=sp_code, y=decline, fill=data))
+  geom_boxplot(aes(x=sp_code, y=`2014`, fill=data))
 
 rec <- ggplot(perc_changes) + 
-  geom_boxplot(aes(x=sp_code, y=recover, fill=data))
+  geom_boxplot(aes(x=sp_code, y=`2017`, fill=data))
 
 perc_changes %>% 
-  pivot_longer(cols=c(decline, recover), names_to="change", values_to="perc_diff") %>% 
+  pivot_longer(cols=c(`2014`,`2017`), names_to="change", values_to="perc_diff") %>% 
   ggplot() + 
   geom_hline(aes(yintercept=0), linetype="dashed") + 
   geom_boxplot(aes(x=change, y=perc_diff, col=data), fill='grey') + 

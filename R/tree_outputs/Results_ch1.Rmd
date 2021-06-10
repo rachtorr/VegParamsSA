@@ -11,7 +11,8 @@ library(tidyverse)
 library(data.table)
 library(patchwork)
 source("../../R/readin_selected_vars.R")
-source("~/climatefiles/mkwy.R")
+#source("~/climfiles/mkwy.R")
+source("~/Documents/GitHub/climfiles/mkwy.R")
 source("../../R/relativeresilience.R")
 
 library(wesanderson)
@@ -21,10 +22,6 @@ ColsVec<- c(climpal[2], climpal[1], climpal[3], climpal[4])
 ```
 
 ## compare model output with data 
-
-![](../plots/compare_leaf_changes.png) 
-</br>
-Have to re-do this graph from tree_lai.Rmd on Bachata - include all trees, similar to the resil_timeser and npp_timeser plots below.. for symmetry we want 2x6 plot, maybe include the precip above it or below using the patchwork formatting 
 
 main rhessys outputs:
 
@@ -36,12 +33,8 @@ main rhessys outputs:
 
 </br>
 
-## Resistance and resilience to drought 
-
-ratio to pre-drought LAI and NPP in 2011 during and after (2017) drought 
-
 ```{r load, echo=F, eval=T}
-setwd("~/VegParamsSA/out/plot")
+setwd("~/Desktop/VegParamsSA/out/plot")
 proj = c("hist","hot","hotter","lower")
 spec = c("quag", "piun","pica","eugl","plra")
 vars = c("lai", "plantc", "plant_resp", "gpsn", "height", "cpool", "trans", "precip", "resp")
@@ -73,14 +66,105 @@ readout$climmod[readout$climmod=="lower"] <- "cooler"
 
 ```
 
+```{r loadin, include=F, message=F}
+group_tree <- function(name, year=TRUE, rds=F){
+  
+  if(rds==T){
+    tbl <- readRDS(paste(name,"outputs.rds", sep="_"))
+  } else {
+    tbl <- read.csv(paste(name, "outputs.csv", sep="_"))
+  }
+  
+  
+  if(year==T){
+    tmp <- tbl %>% group_by(year, run) %>% summarize_at(vars(lai, plantc), funs(mean)) %>% mutate(code=name)
+  } else {
+    tmp <- tbl %>% group_by(yd) %>% summarize_at(vars(lai, plantc), funs(mean)) %>% mutate(code=name)
+  }
+  
+  return(tmp)
+}
+
+## load in and create df 
+trees1 <- list("plra")
+get_year1 <- lapply(trees1, group_tree)
+dfyr1 <- do.call(rbind.data.frame, get_year1)
+
+trees2 <- list("quag","piun","pica", "eugl")
+get_year2 <- lapply(trees2, group_tree, rds=T)
+dfyr22 <- do.call(rbind.data.frame, get_year2)
+
+dfyr <- rbind(dfyr1, dfyr22) %>% 
+  group_by(year, code) %>% summarize_all(funs(mean))
+
+dfyr2 <- rbind(dfyr1, dfyr22)
+```
 
 
-```{r resilience, eval=T}
-
+```{r ndvi_dat, echo=F}
 annp <- readout %>% dplyr::filter(code=="quag" & run==1 & climmod=="hist") %>%
   group_by(wy) %>% 
   summarize_at(vars(precip), list(sum)) %>%
-  dplyr::filter(wy < 2018)
+  dplyr::filter(wy < 2018) %>% 
+  mutate(data_year = ifelse(wy==2011 | wy==2014 | wy==2017,
+                            "data year", ""))
+
+precip_plot <- ggplot(annp) + 
+  geom_col(aes(x=wy, y=precip, fill=data_year), show.legend=F) +
+  geom_hline(aes(yintercept=451.44), linetype="dashed") +
+  scale_fill_brewer(palette="Dark2") + labs(x="water year", y="precipitation [mm]")
+
+vis <- read.csv("../../data/tree_and_turfgrass_monroe2_selected_weightedmeanVIs.csv")
+
+trees_vi <- vis %>% dplyr::filter(sp_class==81|
+                                    sp_class==74|
+                                    sp_class==73|
+                                    sp_class==66|
+                                    sp_class==34)
+
+model_pc <- dfyr2 %>% ungroup() %>%
+  dplyr::filter(year ==2011 | year==2014 | year==2017) %>% 
+  pivot_wider(values_from=lai, names_from=year,  id_cols=c(run,code)) %>%
+  mutate(`2014` = (`2014`-`2011`)/`2011`) %>% 
+  mutate(`2017` = (`2017`-`2011`)/`2011`) %>%
+  mutate(data="rhessys LAI") %>%
+  dplyr::select(ID = run, sp_code=code, `2014`,`2017`, data)
+model_pc$sp_code = toupper(model_pc$sp_code)
+
+index_pc <- trees_vi %>% 
+  dplyr::filter(year ==2011 | year==2014 | year==2017) %>% 
+  pivot_wider(values_from=NDVI, names_from=year,  id_cols=c(ID,sp_code)) %>%
+  mutate(`2014` = (`2014`-`2011`)/`2011`) %>% 
+  mutate(`2017` = (`2017`-`2011`)/`2011`) %>% 
+  mutate(data="NDVI") %>% 
+  dplyr::select(-`2011`)
+
+perc_changes <- rbind(model_pc, index_pc)
+
+all_trees <- perc_changes %>% 
+  mutate(sp_code="all parameters")
+
+
+pc_plot <- rbind(all_trees, perc_changes) %>% 
+  pivot_longer(cols=c(`2014`,`2017`), names_to="change", values_to="perc_diff") %>% 
+  ggplot() + 
+  geom_hline(aes(yintercept=0), linetype="dashed") + 
+  geom_boxplot(aes(x=change, y=perc_diff, col=data), fill='seashell') + 
+  facet_wrap('sp_code') + 
+  scale_color_brewer(palette="Dark2") +
+  theme_bw() + theme(legend.position="top") + 
+  labs(y="percent difference to 2011 values") 
+
+precip_plot / pc_plot
+
+```
+</br>
+
+## Resistance and resilience to drought 
+
+ratio to pre-drought LAI and NPP in 2011 during and after (2017) drought 
+
+```{r resilience, eval=T}
 
 res <- readout %>% dplyr::filter(year < 2018) %>% 
   group_by(year, run, code, climmod) %>% 
