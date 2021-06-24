@@ -6,7 +6,7 @@ source("~/RHESSysIOinR-master/R/select_output_variables_R.R")
 setwd("~/Documents/patches/R/tree_outputs/")
 
 # read in the parameters 
-evr <- read.csv("decid_params.csv") %>% dplyr::select(-X)
+evr <- readRDS("plra_params.rds") #%>% dplyr::select(-X)
 
 # select which variables to look at from output
 output_variables <- data.frame(out_file=character(), variable=character(), stringsAsFactors=FALSE)
@@ -43,10 +43,11 @@ if (is.null(input_tec_data) == FALSE){
 setwd("../../scripts/")
 
 # for changing output location and option sets 
-spec = c("eugl","plra")
+#spec = c("eugl","plra")
+spec = "plra"
 # for changing worldfiles and corresponding def files
-type = c("Euc","Euc")
-
+#type = c("Euc","Euc")
+type="Euc"
 
 for(i in seq_along(spec)){
 
