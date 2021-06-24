@@ -11,7 +11,7 @@ library(tidyverse)
 library(data.table)
 library(patchwork)
 source("../../R/readin_selected_vars.R")
-source("~/Documents/GitHub/climfiles/mkwy.R")
+source("~/climatefiles/mkwy.R")
 source("../../R/relativeresilience.R")
 
 library(wesanderson)
@@ -46,7 +46,7 @@ main rhessys outputs:
 ratio to pre-drought LAI and NPP in 2011 during and after (2017) drought 
 
 ```{r load, echo=F}
-setwd("~/Documents/patches/out/plot")
+setwd("~/VegParamsSA/out/plot")
 proj = c("hist","hot","hotter","lower")
 spec = c("quag", "piun","pica","eugl","plra")
 vars = c("lai", "plantc", "plant_resp", "gpsn", "height", "cpool", "trans", "precip", "resp")
@@ -328,7 +328,7 @@ totable <- topres %>%
     dplyr::select(-bias, -`std. error`, -metric) %>%
   pivot_wider(id_cols = c(param, rank), values_from = c(original,"min. c.i.", "max. c.i."), names_from=c(tree)) %>%
   mutate(ci_dec = paste("[",round(`min. c.i._dec`,2),",", round(`max. c.i._dec`,2),"]", sep=""),
-         ci_evg = paste("[",round(`min. c.i._dec`,2),",", round(`max. c.i._dec`,2),"]", sep="")
+         ci_evg = paste("[",round(`min. c.i._evg`,2),",", round(`max. c.i._evg`,2),"]", sep="")
          ) %>%
   dplyr::select(-`min. c.i._dec`, -`max. c.i._dec`,
                 -`min. c.i._evg`, -`max. c.i._evg`)
@@ -362,11 +362,11 @@ totable %>%
   ) %>%
   tab_row_group(
     label="leaf property",
-    rows='epc.proj_sla'
-  ) %>%
-  fmt_number(
-    columns = c(original_dec, original_evg)
-  ) 
+    rows='epc.proj_sla')
+  # ) %>%
+  # fmt_number(
+  #   columns = c(original_dec, original_evg)
+  # ) 
 
 
 
@@ -410,10 +410,10 @@ totable2 %>%
   tab_row_group(
     label="tree property",
     rows='epc.root_distrib_parm'
-  ) %>%
-  fmt_number(
-    columns = c(original_dec, original_evg)
-  ) 
+  )# %>%
+  #fmt_number(
+  #  columns = c(original_dec, original_evg, decimals=2)
+  #) 
 
 ```
 

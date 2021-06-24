@@ -1,5 +1,5 @@
 ---
-title: "proj climate model outputs"
+title: "results and discussion outline"
 output: html_document
 ---
 
@@ -11,8 +11,8 @@ library(tidyverse)
 library(data.table)
 library(patchwork)
 source("../../R/readin_selected_vars.R")
-#source("~/climfiles/mkwy.R")
-source("~/Documents/GitHub/climfiles/mkwy.R")
+source("~/climatefiles/mkwy.R")
+#source("~/Documents/GitHub/climfiles/mkwy.R")
 source("../../R/relativeresilience.R")
 
 library(wesanderson)
@@ -21,20 +21,34 @@ ColsVec<- c(climpal[2], climpal[1], climpal[3], climpal[4])
 
 ```
 
-## compare model output with data 
+## 1. Model output compared to data
 
-main rhessys outputs:
+After filtering the model outputs of LAI for the year 2011 to be within the range of estimated LAI and filtering by percent changes to LAI during the drought for each tree species, parameters were compiled into ensemble sets. Out of more than 5,000 parameter sets used in the sensitivity analysis, we ended up with 366 for coast live oak, 533 for victorian box, 404 for canary island pine, 86 eucalyptus, and 217 california sycamore (Table). 
+</br>
 
-* bd gpsn	Gross Photosynthesis gC/m2
-* bd resp _ Respiration	gC/m2
-* npp = gpsn - resp 
-* LAI 
-* transpiration 
+**add columns of median 2016 resistance and resilience for each species, each climate scenario - see which is most sensitive to the changes** 
+
+
+Tree | LAI range (Alonzo et al. 2016) | median modelled LAI | Filtered parameter sets (n)
+-----|--------------------------------|---------------------|--------------------
+QUAG | 3.33 - 5.21                    | 3.84                | 366   
+EUGL | 4.22 - 6.29                    | 4.47                | 153               
+PICA | 3.82 - 9.02                    | 4.34                | 404                
+PIUN | 2.82 - 5.5                     | 3.95                | 533                
+PLRA | 3.75 - 6.14                    | 4.12                | 217               
+
+
+Model outputs of LAI for the year 2011 fell within the range of estimated LAI for each species, although the median of the parameter ensembles is slightly lower than the median of the remotely sensed data. In Kendall rank correlation tests, all of the tree species show positive association between the modelled and observed LAI values, with significant p-values. 
+
+We used percent changes in NDVI to compare with changes in LAI in the model. We had NDVI data from 2011, a pre-drought wet year, 2014, the warmest year of the drought, and 2017, a wet year following the drought period. 
+
+Parameter ensembles were filtered to be within the range of percent differences between 2011-2014 and 2011-2017. To test for similarities between the two sets of percent differences, the modelled outputs were randomly sampled from each tree species parameter ensemble to 50 sets, and tested against 50 percent differences in NDVI using a Mann-Whitney test. The results were variable across tree species: QUAG, PICA, and PLRA had significant differences in the decline in LAI / NDVI from 2011-2014. Only EUGL and PLRA show significant differences for the 2011-2017 percent differences. Despite these differences in medians, the results for each tree species parameter ensemble fall within the range of the data. 
 
 </br>
 
 ```{r load, echo=F, eval=T}
-setwd("~/Desktop/VegParamsSA/out/plot")
+#setwd("~/Desktop/VegParamsSA/out/plot")
+setwd("~/VegParamsSA/out/plot")
 proj = c("hist","hot","hotter","lower")
 spec = c("quag", "piun","pica","eugl","plra")
 vars = c("lai", "plantc", "plant_resp", "gpsn", "height", "cpool", "trans", "precip", "resp")
@@ -67,15 +81,10 @@ readout$climmod[readout$climmod=="lower"] <- "cooler"
 ```
 
 ```{r loadin, include=F, message=F}
-group_tree <- function(name, year=TRUE, rds=F){
-  
-  if(rds==T){
-    tbl <- readRDS(paste(name,"outputs.rds", sep="_"))
-  } else {
-    tbl <- read.csv(paste(name, "outputs.csv", sep="_"))
-  }
-  
-  
+group_tree <- function(name, year=TRUE){
+
+ tbl <- readRDS(paste(name,"outputs.rds", sep="_"))
+
   if(year==T){
     tmp <- tbl %>% group_by(year, run) %>% summarize_at(vars(lai, plantc), funs(mean)) %>% mutate(code=name)
   } else {
@@ -86,18 +95,17 @@ group_tree <- function(name, year=TRUE, rds=F){
 }
 
 ## load in and create df 
-trees1 <- list("plra")
-get_year1 <- lapply(trees1, group_tree)
-dfyr1 <- do.call(rbind.data.frame, get_year1)
+trees2 <- list("quag","piun","pica", "eugl", "plra")
+get_year2 <- lapply(trees2, group_tree)
+dfyr2 <- do.call(rbind.data.frame, get_year2)
 
-trees2 <- list("quag","piun","pica", "eugl")
-get_year2 <- lapply(trees2, group_tree, rds=T)
-dfyr22 <- do.call(rbind.data.frame, get_year2)
-
-dfyr <- rbind(dfyr1, dfyr22) %>% 
+dfyr <- dfyr2 %>% 
   group_by(year, code) %>% summarize_all(funs(mean))
 
-dfyr2 <- rbind(dfyr1, dfyr22)
+lai_comp = dfyr2 %>% ungroup() %>%  dplyr::filter(year==2011) %>% 
+  group_by(code) %>% 
+  summarize_at(vars(lai), list(mean, median))
+
 ```
 
 
@@ -107,10 +115,10 @@ annp <- readout %>% dplyr::filter(code=="quag" & run==1 & climmod=="hist") %>%
   summarize_at(vars(precip), list(sum)) %>%
   dplyr::filter(wy < 2018) %>% 
   mutate(data_year = ifelse(wy==2011 | wy==2014 | wy==2017,
-                            "data year", ""))
+                            0, 1))
 
 precip_plot <- ggplot(annp) + 
-  geom_col(aes(x=wy, y=precip, fill=data_year), show.legend=F) +
+  geom_col(aes(x=wy, y=precip, fill=as.factor(data_year)), show.legend=F) +
   geom_hline(aes(yintercept=451.44), linetype="dashed") +
   scale_fill_brewer(palette="Dark2") + labs(x="water year", y="precipitation [mm]")
 
@@ -158,11 +166,14 @@ pc_plot <- rbind(all_trees, perc_changes) %>%
 precip_plot / pc_plot
 
 ```
+In the above plot, the variation in the NDVI data is due to different trees (of the same species) within the dataset. The variation in the model LAI is due to parameter uncertainty. 
+
 </br>
 
-## Resistance and resilience to drought 
+## 2. Drought resistance and resilience
 
-ratio to pre-drought LAI and NPP in 2011 during and after (2017) drought 
+We calculated the resistance to drought as the ratio to pre-drought conditions in 2011 during the drought from 2012-2016. We calculated resilience as the ratio to pre-drought conditions in 2011 after a wet season in 2017. We looked at both resistance and resilience for the annual average LAI and net primary production (NPP) 
+
 
 ```{r resilience, eval=T}
 
@@ -198,19 +209,45 @@ resist_timeser <-  rbind(all_trees, res) %>%
   geom_boxplot(aes(x=as.factor(year), y=resilience, col=climmod), show.legend=T) + 
   theme_bw() + theme(text = element_text(size=10), plot.title = element_text(size = 11), legend.position = "top") +
   scale_color_manual(values = ColsVec) +
-  theme(axis.text.x = element_text(size=11, angle=60)) +
-  scale_x_discrete(guide = guide_axis(check.overlap = TRUE)) +
+  theme(text = element_text(size=10), plot.title = element_text(size = 11), legend.position = "top") + 
+  #scale_x_discrete(guide = guide_axis(check.overlap = TRUE)) +
   facet_wrap('code') +
   labs(title="LAI resistance (2012-2016) and resilience (2017)", 
           y="ratio to 2011", x= "year")
 
 resist_timeser
-npp_timeser
-
 ```
 </br>
-above plot includes resistance years 2012-2016 and resilience in 2017, which is meant to be shaded to differentiate. Both are ratios of the 2011 LAI. 
 
+For LAI resistance and resilience: 
+
+- In the historic drought scenario, most of the trees had a resistance 0.75 or greater, and a resilience of 0.9 or greater 
+- Cooler temperatures increased resistance at the beginning of the drought for all trees, but then had lower resilience after the wet year 
+- Extreme hot temperatures had the least resistance and lower resilience relative to the other temperature scenarios 
+- The victorian box and coast live oak, representative of two broadleaf evergreen trees, both have larger ranges for resistance and resilience to drought, with some of the lowest values dropping below 0.50. 
+</br> 
+
+```{r plot_chunk, echo=F}
+npp_timeser
+```
+
+For NPP resistance and resilience: 
+
+- note: there were some large outliers in these plots that had to be removed.
+- For the historical drought, most trees saw the largest decline in the first drought year, and most returned to pre-drought NPP levels in 2017; there was a similar pattern for the two warming scenarios 
+- As temperature scenarios increase, the range of responses gets larger; the extreme warming scenario had the largest outliers
+- In the cooler temperature scenario, there was less of a range of responses, and less year to year variation. However, the cooler temperatures also resulted in lower resilience values ranging from 0.2 to 0.75, meaning after one wet season only 75% of pre-drought NPP was reached.
+
+</br>
+
+
+## 3. Interannual changes to carbon fluxes during drought
+
+When looking at changes in transpiration, there are minimal differences across temperature scenarios and trees during drought years. This is likely due to transpiration demands exceeding water availability, so all of the water is used no matter the temperature or tree parameters.
+
+For the below plot, we took the median daily carbon fluxes across all parameter ensembles for each temperature scenario. We separated into drought and wet years, where drought years include 2012-2016 and wet years include 2011 and 2017. 
+
+</br>
 
 ```{r carbon, eval=T}
 
@@ -247,153 +284,23 @@ gpplot
 
 ```
 
-## Sensitivity Analysis results
-
-created nicer tables in Excel that make more sense 
-
-will have short descriptions of each parameter, what it does in the model as well...
-
-```{r table}
-library(gt)
-library(glue)
-
-dec_lai <- readRDS("../sobol/sens_lai_results.rds") %>% mutate(tree="dec", 
-                                                               metric="pre-drought LAI")
-dec_res <- readRDS("../sobol/sens_res_results.rds") %>% mutate(tree="dec",
-                                                               metric="LAI resilience")
-evg_lai <- readRDS("../sobol/sens_lai_results_evg.rds") %>% mutate(tree="evg",
-                                                                   metric="pre-drought LAI")
-evg_res <- readRDS("../sobol/sens_res_results_evg.rds") %>% mutate(tree="evg",
-                                                                   metric="LAI resilience")
-
-allres <- rbind(dec_lai, dec_res, evg_lai, evg_res)
-
-test <- allres %>% 
-  dplyr::filter(rank=="T") %>% 
-  group_by(tree, metric) %>% 
-  arrange(-original) %>% 
-  slice(1:5)
-
-test_S = allres %>% 
-  dplyr::filter(rank=="S") 
-
-tmp <- left_join(test, test_S, by=c("param","tree","metric"))  
-tmp2 <- tmp %>% dplyr::select(
-  param, tree, metric,
-  original=original.y,
-  bias=bias.y,
-  `std. error` = `std. error.y`,
-  `min. c.i.` = `min. c.i..y`,
-  `max. c.i.` = `max. c.i..y`,
-  rank = rank.y)
-
-
-topres = rbind(test, tmp2)
-
-totable <- topres %>%
-  dplyr::filter(metric=="pre-drought LAI") %>%
-    dplyr::select(-bias, -`std. error`, -metric) %>%
-  pivot_wider(id_cols = c(param, rank), values_from = c(original,"min. c.i.", "max. c.i."), names_from=c(tree)) %>%
-  mutate(ci_dec = paste("[",round(`min. c.i._dec`,2),",", round(`max. c.i._dec`,2),"]", sep=""),
-         ci_evg = paste("[",round(`min. c.i._evg`,2),",", round(`max. c.i._evg`,2),"]", sep="")
-         ) %>%
-  dplyr::select(-`min. c.i._dec`, -`max. c.i._dec`,
-                -`min. c.i._evg`, -`max. c.i._evg`)
-
-
-totable %>% 
-  gt(rowname_col = 'param') %>%
-  tab_header(
-    title = "Sobol sensitivity analysis",
-    subtitle = glue::glue("pre-drought LAI")
-  ) %>%
-  tab_spanner(
-    label="Evergreen",
-    columns = c(original_evg, ci_evg)
-  ) %>%
-  tab_spanner(
-    label="Deciduous",
-    columns = c(original_dec, ci_dec)
-  ) %>%
-  tab_row_group(
-    label="soil",
-    rows='pore_size_index'
-  ) %>%
-  tab_row_group(
-    label="carbon allocation",
-    rows=c('epc.alloc_stemc_leafc', 'epc.waring_pa', 'epc.waring_pb')
-  ) %>%
-  tab_row_group(
-    label="turnover rates",
-    rows=c('epc.branch_turnover', 'epc.leaf_turnover')
-  ) %>%
-  tab_row_group(
-    label="leaf property",
-    rows='epc.proj_sla')
-  # ) %>%
-  # fmt_number(
-  #   columns = c(original_dec, original_evg)
-  # ) 
-
-
-
-
-totable2 <- topres %>%
-  dplyr::filter(metric=="LAI resilience") %>%
-    dplyr::select(-bias, -`std. error`, -metric) %>%
-  pivot_wider(id_cols = c(param, rank), values_from = c(original,"min. c.i.", "max. c.i."), names_from=c(tree)) %>%
-  mutate(ci_dec = paste("[",round(`min. c.i._dec`,2),",", round(`max. c.i._dec`,2),"]", sep=""),
-         ci_evg = paste("[",round(`min. c.i._evg`,2),",", round(`max. c.i._evg`,2),"]", sep="")
-         ) %>%
-  dplyr::select(-`min. c.i._dec`, -`max. c.i._dec`,
-                -`min. c.i._evg`, -`max. c.i._evg`)
-
-totable2 %>% 
-  gt(rowname_col = 'param') %>%
-  tab_header(
-    title = "Sobol sensitivity analysis",
-    subtitle = glue::glue("LAI Resilience")
-  ) %>%
-  tab_spanner(
-    label="Evergreen",
-    columns = c(original_evg, ci_evg)
-  ) %>%
-  tab_spanner(
-    label="Deciduous",
-    columns = c(original_dec, ci_dec)
-  ) %>%
-  tab_row_group(
-    label="soil",
-    rows=c('pore_size_index','psi_air_entry')
-  ) %>%
-  tab_row_group(
-    label="carbon allocation and photosynthesis",
-    rows=c('epc.netpabs_sunlit', 'epc.storage_transfer_prop', 'epc.waring_pb')
-  ) %>%
-  tab_row_group(
-    label="turnover rates",
-    rows=c('epc.branch_turnover', 'epc.froot_turnover')
-  ) %>%
-  tab_row_group(
-    label="tree property",
-    rows='epc.root_distrib_parm'
-  )# %>%
-  #fmt_number(
-  #  columns = c(original_dec, original_evg, decimals=2)
-  #) 
-
-```
-
-![Table of pre-drought LAI Sobol results](predroughtLAI_SA_table.png) 
+- During drought years, GPSN is relatively less in winter compared to wet years, with summer values approaching zero.
+- Winter GPSN increases with temperature, but higher temperatures also decrease summer GPSN
+- Net respiration amounts generally increase with temperature, but there are relatively small differences across seasons and dry v. wet years
+- The median NPP of all scenaerios varies with temperature, although all temperature scenarios include a period of time when the trees become a carbon source during the drought. During wet years the time spent in the summer with negative NPP is less than the drought years. 
+- Winter values of NPP are comparable across dry and wet years - the changes in net annual NPP is mainly due to the decrease in summer during drought
+- There is a sharper decline from higher winter NPP to summer lows during drought, which is explored more below 
 </br>
-![Table of LAI resilience Sobol results](LAIresil_SA_table.png)
 
-# Species differences in NPP shifts during drought years
+### Seasonal differences in GPSN scross scenarios 
 
-calculate changes in peak npp to negative npp for each species and climate. use Day of center of mass - so 50% of it happens before and 50% after 
+To further explore the changes to seasonal carbon fluxes during drought, we calculated changes in peak gross photosynthesis for each species parameter ensemble and temperature scenario. We looked at the day of the year when 50% of GPSN is reached to see how drought changes the timing of productivity. 
+</br> 
 
-- with taking center of mass of GPSN 
-
+- During drought years, half of the GPSN is reached earlier in the year compared to wet years 
+- The changes between tree species may have to do with the leaf-on and leaf-off periods set in the model
+- cooler temperatures have longer periods of GPSN through the year, but lower net amounts, while warmer temperatures have higher net amounts, but a shorter season.
+</br>
 
 ```{r days, eval=T}
 
@@ -444,10 +351,92 @@ tmp_summary <- tmp2 %>%
 
 ggplot(tmp_summary) +
   geom_hline(aes(yintercept=0)) + 
-  geom_pointrange(aes(x=medianday, xmin=lowday, xmax=highday, y=mediannpp, ymin=lownpp, ymax=highnpp, col=climmod,  shape=dyear)) + theme_bw() +
+  geom_pointrange(aes(x=medianday, xmin=lowday, xmax=highday, y=mediannpp/1000, ymin=lownpp/1000, ymax=highnpp/1000, col=climmod,  shape=dyear)) + theme_bw() +
   scale_color_manual(values=ColsVec) + 
   facet_grid('code') + 
-  ggtitle("50% gpsn - summarized by day first, not by median")
+  labs(y="med. of net annual GPSN (gC/m^2)", x="day of year") + 
+  ggtitle("median day of year when 50% gpsn is reached")
  
 
 ```
+</br>
+
+## Discussion
+
+**in discussion add paragraph on species differences - which are most and least sensitive** 
+
+#### 1 .Differences in drought resistance and resilience 
+
+  * Across tree species, temperature scenarios followed a similar pattern for resistance and resilience. While cooler temperatures increased drought resistance for both LAI and NPP, they hindered resilience after the wet year. For warmer temperatures, the resistance decreased during the drought as temperature increased. However, for NPP the warmer temperature scenarios returned to pre-drought levels in 2017. 
+  
+  * The reduction in LAI after the first couple of drought years is likely due to reduced water availability leading to a decline in re-growth. There is an annual loss of biomass due to senescence, but because of the drought, they are not able to fully replace the loss in LAI. As there is also a decline in NPP during the drought, there is less carbon available to allocate to leaves. The carbon allocation strategy used in the model is based on resource limitation, so it is likely that because of the limited water, carbon was allocated to roots instead of leaves. After the wet season in 2017, all of the trees responded with an increased leaf out, similar to the patterns shown in the increase in NDVI in Miller et al. 2020. 
+
+  * As LAI resistance decreases throughout the drought, NPP resistance shows an increase after the first drought year, which is the lowest year for NPP. This could be due to the decrease in leaf area, causing a decline in respiration.
+    + Would GPSN also decline with less leaf area? Is the rate of decline different for each so that NPP is able to balance out?  
+ 
+  * Being in a Mediterranean climate, the majority of productivity occurs during the winter, and the trees are likely adapted to seasonal summer drought where water is conserved but a lower level of productivity is maintained. [cite source]
+    + In the case of the first drought year, the sharp decrease in NPP may be due to the inability to maintain the summer photosynthesis while respiration is relatively the same as the previous year, before the tree has reduced LAI and subsequent reduced respiration. 
+    + the loss of biomass allows there to be a reduction in maintenence respiration, causing the NPP to increase slightly after first drought year
+
+  * The differences across magnitude and range of tree species LAI and NPP resistance are due to differences in parameters, where parameters relating to turnover rates and carbon allocation play important roles in the resistance and resilience. 
+    + Need to look at the differences in the parameters for the different species to describe more here, but will look at waring_pa, leaf_turnover, etc. 
+    + How do turnover rates affect drought resilience?
+    + Carbon allocation - does this change during a drought to preserve carbon stores for wet year green ups
+
+
+#### 2. Effects of warming temperatures on seasonal and annual carbon fluxes 
+
+  * During drought, trees become a net carbon source, which is exacerbated by higher temperatures. This is mainly due to a decrease in summer GPSN, with minimal changes to respiration. 
+ 
+  * For net annual photosynthesis and seasonal timing there are distinct differences between wet years and drought years 
+    + During wet years, there is a longer season of productivity in the winter extending into summer with lower levels of productivity, but still greater than dry year summer amounts. Compared to drought years, there is a similar amount of winter productivity that drops to zero earlier in the year and stays very low or at zero during the summer. 
+    + If the temperatures are cooler the productivity is maintained for longer, although at lower amounts 
+During wet years, there are greater differences across temperature scenarios for productivity. This is because during drought, no matter the temperature, productivity is limited by water availability. When it is not limited, the season length of productivity increases with decreasing temperature. 
+    + The differences in resilience of NPP between temperature scenarios is mainly due to differences in GPSN. 
+  * If the post-drought wet year is at historical or slightly warmer temperatures, it helps recovery of LAI and NPP by increasing growing season length and net annual GPSN. 
+  * With cooler temperatures, there is less net GPSN, and less NPP after the post-drought wet year. On the other hand, if temperatures are extremely warm the growing season is shortened. 
+
+#### 4. Species differences across parameters and scenarios 
+
+  * look at median resistance and resilience 
+  * differences in turnover rates.. find papers to compare 
+  * cite papers that will back up species level differences in response to drought
+  * cite that one paper that argues for city forests to be used as experimental labs in terms of warming effects
+  * We explore which parameters matter the most for evergreen and deciduous trees in the supplementary information. 
+
+#### 3. Implications for urban tree management and climate change?
+
+  * discuss 'climate-ready' trees 
+  * link back to ecosystem services, what does decline in LAI and NPP mean for other processes 
+  * need to account for irrigation 
+
+## Supplementary Info 
+
+#### Sensitivity Analysis results
+
+There were two metrics used to look at Sobol indices in the sensitivity analysis. The first was the average LAI in 2011, as the pre-drought conditions. The second was the resilience of LAI, or the ratio of the average LAI in 2017 to the average LAI in 2011. 
+</br>
+
+The parameter ranges for the sensitivity analysis differed between evergreen and deciduous tree types, as the limits set on some of the parameters varied enough to do two separate analysis. 
+</br> 
+For both metrics and tree types, we looked at the parameters with the highest total rank indices. The top 5 for each group are shown in the tables below. 
+
+![Table of pre-drought LAI Sobol index results](predroughtLAI_SA_table.png) 
+</br>
+
+For the 2011 LAI, evergreen parameters that had the largest sensitivity included leaf and branch turnover rates (epc.leaf_turnover, epc.branch_turnover), specific leaf area (epc.proj_sla), and two waring parameters (epc.waring_pa, epc.waring_pb), which are parameters within RHESSys that affect carbon allocation to leaves and roots, based on the allocation strategy from Landsberg and Waring, 1997. 
+
+For the deciduous type, LAI is also sensitive to the waring parameters and leaf turnover rates, as well as the allocation ratio between stem carbon and leaf carbon (epc.alloc_stemc_leafc). Pore size index was also sensitive for both tree types, which affects how much water is available in the soil. </br>
+
+![Table of LAI resilience Sobol index results](LAIresil_SA_table.png)
+
+For LAI drought resilience, there were similar parameters that stood out including leaf and branch turnover rates, and one of the waring parameters. In evergreen trees, the parameter epc.root_distrib_parm was significant; this affects how deep the roots are able to grow. For the deciduous type, fine root turnover was important, as well as carbon parameters including the fraction of carbon to be used each year (epc.storage_transfer_prop), the amount of fPAR used for photosynthesis (epc.netpabs_sunlit). This parameters affects the water use efficiency for photosynthesis. 
+
+Both soil parameters were important for resilience, although the level of importance varied. For broadleaf, resilience was more sensitive to soil air entry pressure (psi_air_entry), and for deciduous it was more sensitive to the pore  size index, similar to the actual pre-drought LAI.
+
+Both soil parameters affect the field capacity, so the LAI and LAI resilience are sensitive to the overall field capacity in the model. Field capacity determines how much water is available to the tree.
+
+</br>
+
+**re-do tables to include all the values for both decid and evg. and each parameter, but bold the ones that were higher or stand out more, rather than blank spots**
+
