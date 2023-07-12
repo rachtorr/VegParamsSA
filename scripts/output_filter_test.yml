@@ -1,0 +1,55 @@
+filter:
+	timestep: daily
+	output:
+		format: csv
+		path: "../out"
+		filename: "wb_bas"
+	basin:
+		ids: 608537
+		variables: 
+		zone.rain,
+		patch.total_water_in,
+		patch.streamflow,
+    hill.gw.Qout,
+    hill.gw.storage,
+    patch.Qout,
+    patch.Qout_total,
+    patch.Qin,
+    patch.Qin_total
+		patch.evaporation,
+		patch.evaporation_surf,
+		patch.exfiltration_sat_zone,
+		patch.exfiltration_unsat_zone,
+		patch.sat_zone_storage,
+    patch.snowpack.water_equivalent_depth,
+		patch.sat_deficit,
+		patch.sat_deficit_z, 
+		patch.rootzone.field_capacity,
+		patch.rz_storage,
+		patch.unsat_storage,
+		patch.detention_store,
+		patch.litter.rain_stored,
+		patch.sat_zone_storage,
+    patch.trans_reduc_perc,
+    patch.rz_drainage,
+    patch.unsat_drainage,
+    patch.recharge,
+    patch.rootzone.potential_sat,
+    patch.rootzone.depth,
+    patch.water_balance
+
+filter:
+	timestep: daily
+	output:
+		format: csv
+		path: "../out"
+		filename: "wb_strat"
+	stratum:
+		ids: 608537
+		variables: 
+		stratum.veg_parm_ID,
+		trans_sat = stratum.transpiration_sat_zone, 
+    trans_unsat = stratum.transpiration_unsat_zone,
+		stratum.rain_stored,
+    stratum.snow_stored,
+    stratum.cover_fraction
