@@ -1,0 +1,107 @@
+filter:
+	timestep: daily
+	output:
+		format: csv
+		path: "../out"
+		filename: "wb_bas"
+	basin:
+		ids: 608537
+		variables: 
+		zone.rain,
+		patch.total_water_in,
+		patch.streamflow,
+    hill.gw.Qout,
+    hill.gw.storage,
+    patch.Qout,
+    patch.Qout_total,
+    patch.Qin,
+    patch.Qin_total
+		patch.evaporation,
+		patch.evaporation_surf,
+		patch.exfiltration_sat_zone,
+		patch.exfiltration_unsat_zone,
+		patch.sat_zone_storage,
+    patch.snowpack.water_equivalent_depth,
+		patch.sat_deficit,
+		patch.sat_deficit_z, 
+		patch.rootzone.field_capacity,
+		patch.rz_storage,
+		patch.unsat_storage,
+		patch.detention_store,
+		patch.litter.rain_stored,
+		patch.sat_zone_storage,
+    patch.trans_reduc_perc,
+    patch.rz_drainage,
+    patch.unsat_drainage,
+    patch.recharge,
+    patch.rootzone.potential_sat,
+    patch.rootzone.depth,
+    stratum.transpiration_sat_zone, 
+    stratum.transpiration_unsat_zone,
+    stratum.rain_stored,
+    stratum.snow_stored,
+    patch.water_balance
+
+filter:
+	timestep: daily
+	output:
+		format: csv
+		path: "../out"
+		filename: "wb_p"
+	patch:
+		ids: 608537
+		variables: 
+		patch.ID, 
+		patch.family_ID, 
+		patch.rz_transfer,
+		patch.unsat_transfer,
+		patch.detention_store,
+		patch.evaporation, 
+		patch.evaporation_surf,
+		stratum.transpiration_unsat_zone, 
+		stratum.transpiration_sat_zone,
+		patch.Qout,
+		patch.rootzone.depth,
+		patch.sat_deficit,
+		patch.rz_storage,
+		patch.unsat_storage,
+		patch.rootzone.potential_sat,  
+    patch.rootzone.field_capacity,
+		patch.recharge,
+		patch.streamflow,
+		patch.water_balance,
+		patch.rain_throughfall,
+		patch.preday_detention_store,
+		patch.total_water_in,
+		patch.exfiltration_sat_zone,
+		patch.exfiltration_unsat_zone, 
+		patch.detention_store,
+		patch.unsat_storage,
+		patch.rain_stored, 
+		patch.snow_stored,
+		stratum.cs.totalc,
+		stratum.cdf.psn_to_cpool,
+		stratum.cs.live_stemc, stratum.cs.dead_stemc,
+		patch.lai,
+		patch.height, 
+		patch.rootzone.S,
+		stratum.veg_parm_ID,
+		patch.infiltration_excess,
+		stratum.cs.net_psn,
+		stratum.rootzone.sat, 
+		stratum.rootzone.unsat,
+		stratum.PET,
+		trans=transpiration_unsat_zone + transpiration_sat_zone,
+		sat_deficit_z,
+		rz_drainage,
+		unsat_drainage,
+		patch.field_capacity
+
+
+
+
+        
+
+
+
+

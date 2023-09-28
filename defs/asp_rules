@@ -7,8 +7,8 @@
 
 \f0\fs24 \cf0 \
 ID 1\
-subpatch_count 2\
+subpatch_count 3\
 _patch \
-	pct_family_area value 0.5 | 0.5 \
-	_canopy_strata 1 | 1\
-	veg_parm_ID dvalue 3 | 1}
+	pct_family_area value 0.5 | 0.25 | 0.25\
+	_canopy_strata 1 | 1 | 1\
+	veg_parm_ID dvalue 3 | 1 | 11 }

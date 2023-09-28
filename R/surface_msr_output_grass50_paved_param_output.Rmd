@@ -1,0 +1,172 @@
+---
+title: "patch family surface transfer balances: turfgrass"
+date: "2023-09-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(patchwork)
+library(lubridate)
+library(RHESSysIOinR)
+source("/Volumes/GoogleDrive/My Drive/help_with_rhessys/watbal.R")
+library(here)
+dir = "out/tgrass50/msr_on"
+```
+
+
+```{r basin, echo=FALSE}
+
+wb_bas = readr::read_delim(here(dir,"param_u_bas.csv")) 
+
+watbal = wb_bas %>% group_by(date) %>% summarize(balance = mean(watbal)) 
+
+ggplot(watbal) + geom_point(aes(x=date, y=balance)) + ggtitle("basin water balance")
+
+```
+
+turfgrass parameters that were set up using just single patch of turfgrass and irrigation
+
+- did not balance with sharing on and oak tree
+- sharing with pavement does balance  - more water input from surface transfer, no rz transfer  
+
+
+#### paved patch fam: 50% turfgrass, 50% pavement 
+
+patchIDs:
+
+- 60853701 = turfgrass
+- 60853702 = pavement/tree if tree  
+
+```{r patch, echo=FALSE}
+wb_p = readr::read_delim(here(dir,"param_u_p.csv")) 
+
+ggplot(wb_p) + geom_boxplot(aes(x=patchID, y=surface_transfer, col=as.factor(patchID))) + 
+  ggtitle("surface transfers")
+
+
+ggplot(wb_p) + geom_point(aes(x=date, y=rz_storage, col=as.factor(patchID)))+
+  ggtitle("rz_storage")
+
+
+ggplot(wb_p) + geom_point(aes(x=date, y=unsat_storage, col=as.factor(patchID)))+
+    ggtitle("unsat storage")
+
+```
+
+- with tree instead of pavement, rz was below zero sometimes, not the case here which is good 
+
+### compare with when msr is turned off - need to run this still
+
+```{r tree, echo=FALSE}
+
+tocomp = wb_p %>% 
+  group_by(patchID, date) %>% 
+  summarise_at(vars(streamflow, evap, rootzone.S, rootzone.field_capacity), funs(mean, sd)) %>% 
+  mutate(id = factor(patchID, 
+                     levels = c(60853701, 60853702), 
+                     labels=c("grass", "tree")))
+
+ggplot(tocomp) + geom_line(aes(x=date, y=streamflow_mean, col=id))
+
+ggplot(tocomp) + geom_line(aes(x=date, y=evap_mean, col=id))  
+
+ggplot(tocomp) + geom_line(aes(x=date, y=rootzone.S_mean, col=id)) +
+  geom_ribbon(aes(x=date, ymin=rootzone.S_mean-rootzone.S_sd, 
+                  ymax = rootzone.S_mean+rootzone.S_sd, fill=id), alpha=0.25)
+
+ggplot(tocomp) + geom_line(aes(x=date, y=rootzone.field_capacity_mean, col=id)) +
+  geom_ribbon(aes(x=date, ymin=rootzone.field_capacity_mean-rootzone.S_sd, 
+                  ymax = rootzone.field_capacity_mean+rootzone.field_capacity_sd, fill=id), alpha=0.25)
+
+```
+
+#### stratum output 
+
+```{r msr, echo=FALSE}
+
+oak = readr::read_delim(here(dir, "param_u_strat.csv")) %>%
+       mutate(id = factor(patchID, 
+                     levels = c(60853701, 60853702), 
+                     labels=c("grass", "paved")))
+
+strat = oak %>% 
+  group_by(id, date) %>%
+  summarise_at(vars(epv.proj_lai, epv.height, rootzone.depth, cs.totalc, npp), funs(mean, sd)) 
+  
+ggplot(strat) + geom_line(aes(x=date, y=epv.proj_lai_mean, col=id)) + geom_ribbon(aes(x=date, ymax=epv.proj_lai_mean+epv.proj_lai_sd,
+                                                                                      ymin=epv.proj_lai_mean-epv.proj_lai_sd,
+                                                                                      fill=id), alpha=0.25) + ggtitle("proj lai")
+
+ggplot(strat) + geom_line(aes(x=date, y=epv.height_mean, col=id)) + geom_ribbon(aes(x=date, ymax=epv.height_mean+epv.height_sd,
+                                                                                      ymin=epv.height_mean-epv.height_sd,
+                                                                                      fill=id), alpha=0.25) + ggtitle("height")
+
+ggplot(strat) + geom_line(aes(x=date, y=rootzone.depth_mean, col=id)) + geom_ribbon(aes(x=date, ymax=rootzone.depth_mean+rootzone.depth_sd,
+                                                                                      ymin=rootzone.depth_mean-rootzone.depth_sd,
+                                                                                      fill=id), alpha=0.25) + ggtitle("rz depth")
+
+
+ggplot(strat) + geom_line(aes(x=date, y=cs.totalc_mean, col=id)) + geom_ribbon(aes(x=date, ymax=cs.totalc_mean+cs.totalc_sd,
+                                                                                      ymin=cs.totalc_mean-cs.totalc_sd,
+                                                                                      fill=id), alpha=0.25) + ggtitle("cs.totalc")
+
+```
+
+#### annual values 
+```{r ann, echo=F}
+
+oak %>% 
+    group_by(year, id, run) %>% summarise(var = sum(trans)) %>%
+    group_by(year, id) %>% summarise_at(vars(var), 
+                                        funs(mean, sd)) %>% 
+  ggplot() + geom_line(aes(x=year, y=mean, col=id)) +
+    geom_ribbon(aes(x=year, ymax=mean+sd, ymin = mean-sd, fill=id), alpha=0.25) +
+    ggtitle("transpiration")
+
+
+oak %>% 
+    group_by(year, id, run) %>% summarise(var = sum(npp)) %>%
+    group_by(year, id) %>% summarise_at(vars(var), funs(mean, sd)) %>% 
+  ggplot() + geom_line(aes(x=year, y=mean, col=id)) +
+    geom_ribbon(aes(x=year, ymax=mean+sd, ymin = mean-sd, fill=id), alpha=0.25) +
+    ggtitle("npp")
+
+
+oak %>% 
+    group_by(year, id, run) %>% summarise(var = sum(cdf.psn_to_cpool)) %>%
+    group_by(year, id) %>% summarise_at(vars(var), funs(mean, sd)) %>% 
+  ggplot() + geom_line(aes(x=year, y=mean, col=id)) +
+    geom_ribbon(aes(x=year, ymax=mean+sd, ymin = mean-sd, fill=id), alpha=0.25) +
+    ggtitle("psn")
+
+```
+
+#### after 60 years run, daily values 
+
+```{r boxplots, echo=FALSE, eval=T}
+
+msroff = readr::read_delim(here(dir, "../param_u_strat.csv")) %>% 
+  dplyr::filter(patchID==60853701) %>% 
+  mutate(id="grass")
+  
+msron = oak %>% mutate(msr="on") %>%
+  dplyr::filter(patchID==60853701) 
+
+tree = rbind(msron, msroff) 
+
+ggplot(tree) + geom_boxplot(aes(x=msr, y=epv.proj_lai, col=msr))
+ggplot(tree) + geom_boxplot(aes(x=msr, y=epv.height, col=msr))
+ggplot(tree) + geom_boxplot(aes(x=msr, y=cs.totalc, col=msr))
+ggplot(tree) + geom_boxplot(aes(x=msr, y=trans, col=msr))
+ggplot(tree) + geom_boxplot(aes(x=msr, y=rootzone.depth, col=msr))
+ggplot(tree) + geom_boxplot(aes(x=msr, y=npp, col=msr))
+
+
+```
+
+- 200 parameter sets used 
+
+
+

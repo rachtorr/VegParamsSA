@@ -9,4 +9,4 @@
 1		landuse.percent_impervious
 0		surf_g 
 0		surface_routing_threshold 
-
+0		msr_sat_transfer_flag

@@ -1,0 +1,165 @@
+---
+title: "patch family surface transfer balances: 3 patches"
+date: "2023-09-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(patchwork)
+library(lubridate)
+library(RHESSysIOinR)
+source("/Volumes/GoogleDrive/My Drive/help_with_rhessys/watbal.R")
+```
+
+
+```{r basin, echo=FALSE}
+
+wb_bas = read.csv("../out/wb_bas.csv") %>% 
+  mkdate() %>% 
+  mutate(canopy_snow_stored = snow_stored,                                           canopy_rain_stored = rain_stored) %>%
+  watbal_basin_of()
+
+ggplot(wb_bas) + geom_point(aes(x=date, y=watbal)) + ggtitle("basin water balance")
+
+```
+
+
+#### paved patch fam: 25% oak, 25% turfgrass, 50% pavement 
+
+patchIDs:
+
+- 60853701 = pavement 
+- 60853702 = turfgrass
+- 60853703 = tree 
+
+```{r patch, echo=FALSE}
+wb_p = read.csv("../out/wb_p.csv") %>% mkdate() %>% dplyr::filter(year <= 1998)
+
+ggplot(wb_p) + geom_point(aes(x=date, y=surface_transfer, col=as.factor(patchID))) + 
+  ggtitle("surface transfers")
+
+ggplot(wb_p) + geom_point(aes(x=date, y=recharge, col=as.factor(patchID))) +
+  ggtitle("infiltration")
+
+ggplot(wb_p) + geom_point(aes(x=date, y=rz_storage, col=as.factor(patchID)))+
+  ggtitle("rz_storage")
+
+ggplot(wb_p) + geom_point(aes(x=date, y=rz_transfer, col=as.factor(patchID))) +
+  ggtitle("rz_transfer")
+
+ggplot(wb_p) + geom_point(aes(x=date, y=rz_drainage, col=as.factor(patchID)))+
+  ggtitle("rz_drainage")
+
+ggplot(wb_p) + geom_point(aes(x=date, y=unsat_storage, col=as.factor(patchID)))+
+    ggtitle("unsat storage")
+
+ggplot(wb_p) + geom_point(aes(x=date, y=rootzone.field_capacity, col=as.factor(patchID)))+
+    ggtitle("rootzone fc")
+
+ggplot(wb_p) + geom_point(aes(x=date, y=field_capacity, col=as.factor(patchID)))+
+    ggtitle("fc")
+
+```
+
+### compare with when msr is turned off
+
+```{r tree, echo=FALSE}
+
+oak = read.csv("../out/wb_p.csv") %>% mkdate() %>%
+  mutate(msr= factor(patchID, 
+                     levels = c(60853701, 60853702, 60853703), 
+                     labels=c("paved", "grass","tree")))
+
+tocomp=oak %>% dplyr::filter(year<1998)
+
+ggplot(tocomp) + geom_line(aes(x=date, y=streamflow, col=msr))
+ggplot(tocomp) + geom_line(aes(x=date, y=evap, col=msr))
+ggplot(tocomp) + geom_line(aes(x=date, y=rootzone.S, col=msr))
+ggplot(tocomp) + geom_line(aes(x=date, y=rootzone.field_capacity, col=msr))
+ggplot(tocomp) + geom_line(aes(x=date, y=rz_drainage, col=msr))
+
+```
+
+#### stratum output 
+
+```{r msr, echo=FALSE, eval=T}
+
+msr = read.csv("../out/wb_strat.csv") %>% mkdate() %>%
+  mutate(id="msr on" , msr = factor(patchID, 
+                     levels = c(60853701, 60853702, 60853703), 
+                     labels=c("paved", "grass","tree")))
+
+strat = msr %>% dplyr::filter(year < 1998)
+  
+ggplot(strat) + geom_line(aes(x=date, y=epv.proj_lai, col=msr, linetype=id))
+ggplot(strat) + geom_line(aes(x=date, y=epv.height, col=msr, linetype=id))
+ggplot(strat) + geom_line(aes(x=date, y=rootzone.depth, col=msr, linetype=id))
+ggplot(strat) + geom_line(aes(x=date, y=cs.totalc, col=msr, linetype=id))
+```
+
+#### first couple of years of sim 
+
+```{r start, echo=F, eval=F}
+strat_beg = strat[strat$year<1996,]
+ggplot(strat_beg) + geom_line(aes(x=date, y=cs.totalc, col=msr, linetype=id))
+ggplot(strat_beg) + geom_line(aes(x=date, y=cdf.psn_to_cpool, col=msr, linetype=id))
+ggplot(strat_beg) + geom_line(aes(x=date, y=rootzone.depth, col=msr, linetype=id))
+ggplot(strat_beg) + geom_line(aes(x=date, y=trans, col=msr, linetype=id))
+ggplot(strat_beg) + geom_line(aes(x=date, y=npp, col=msr, linetype=id))
+
+ggplot(tocomp[tocomp$year<1996,]) + geom_line(aes(x=date, y=rootzone.S, col=msr, linetype=id))
+
+ggplot(tocomp[tocomp$year<1996,]) + geom_line(aes(x=date, y=rz_drainage, col=msr, linetype=id)) + facet_grid("msr")
+
+ggplot(tocomp[tocomp$year<1996,]) + geom_line(aes(x=date, y=rootzone.field_capacity, col=msr, linetype=id)) + facet_grid("msr")
+
+```
+
+#### annual values 
+```{r ann, echo=F, eval=T}
+
+strat = read.csv("../out/wb_strat.csv") %>% mkdate() %>%
+  mutate(msr = factor(patchID, 
+                     levels = c(60853701, 60853702, 60853703), 
+                     labels=c("paved", "grass","tree")),
+         id="msr_on")
+
+strat %>% group_by(year, msr, id) %>% summarise(var = sum(trans)) %>% ggplot() + geom_line(aes(x=year, y=var, col=msr, linetype=id)) + ggtitle("transpiration")
+
+strat %>% group_by(year, msr, id) %>% summarise(var = sum(npp)) %>% ggplot() + geom_line(aes(x=year, y=var, col=msr, linetype=id)) + ggtitle("npp")
+
+strat %>% group_by(year, msr, id) %>% summarise(var = sum(resp)) %>% ggplot() + geom_line(aes(x=year, y=var, col=msr, linetype=id)) + ggtitle("resp")
+
+strat %>% group_by(year, msr, id) %>% summarise(var = sum(cdf.psn_to_cpool)) %>% ggplot() + geom_line(aes(x=year, y=var, col=msr, linetype=id)) + ggtitle("psn")
+
+strat %>% group_by(year, msr, id) %>% summarise(var = mean(epv.proj_lai)) %>% ggplot() + geom_line(aes(x=year, y=var, col=msr, linetype=id)) + ggtitle("lai")
+
+strat %>% group_by(year, msr, id) %>% summarise(var = mean(cs.leafc)) %>% ggplot() + geom_line(aes(x=year, y=var, col=msr, linetype=id)) + ggtitle("leafc")
+
+strat %>% group_by(year, msr, id) %>% summarise(var = mean(rootc)) %>% ggplot() + geom_line(aes(x=year, y=var, col=msr, linetype=id)) + ggtitle("rootc")
+
+```
+
+#### after 60 years run, daily values 
+
+```{r boxplots, echo=FALSE, eval=T}
+
+tree = strat %>% dplyr::filter(patchID != 60853701)
+ggplot(tree) + geom_boxplot(aes(x=msr, y=epv.proj_lai, col=msr))
+ggplot(tree) + geom_boxplot(aes(x=msr, y=cs.totalc, col=msr))
+ggplot(tree) + geom_boxplot(aes(x=msr, y=trans, col=msr))
+ggplot(tree) + geom_boxplot(aes(x=msr, y=et, col=msr))
+ggplot(tree) + geom_boxplot(aes(x=msr, y=npp, col=msr))
+ggplot(tree) + geom_boxplot(aes(x=msr, y=cdf.psn_to_cpool, col=msr))
+
+```
+
+questions: 
+
+- What is the difference between soil_defaults.detention_store_size and landuse_defaults.detention_store_size? (both set to zero in this case, but should one or the other be used in script? 
+- no subsurface transfers occur below pavement, but there is unsat storage - will this not affect tree root? If possibly yes, should soil parameters below pavement be changed to try and reflect more compact or anaerobic properties
+
+
+
