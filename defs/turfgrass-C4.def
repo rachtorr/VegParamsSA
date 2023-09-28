@@ -71,8 +71,8 @@ combined       epc.allocation_flag
 5.000000       epc.gs_tmax
 900.000000       epc.gs_vpd_min
 4100.00000       epc.gs_vpd_max
-39600.0000       epc.gs_dayl_min
-50400.0000       epc.gs_dayl_max
+39600       epc.gs_dayl_min
+52200       epc.gs_dayl_max
 -15     epc.gs_psi_min
 -14       epc.gs_psi_max
 10.0       epc.gs_ravg_days

@@ -200,7 +200,7 @@ system.time(
 #----check parameter sensitivity ####
 #####################################
 
-parm_strat = readr::read_table(paste(outdir, "param_u_strat.csv", sep="")) 
+parm_strat = readr::read_table("../mod_data/c4/param_u_strat.csv") 
 
 # plot time series 
 parm_strat %>% dplyr::filter(parm_strat$`"veg_parm_ID"`==3) %>% 
@@ -246,7 +246,7 @@ ggplot(parm_veg_state) + geom_boxplot(aes(x=as.factor(month_psn), y=value, group
 parm_veg_state = parm_strat %>% 
   dplyr::filter(`"veg_parm_ID"`==3) %>%
   mutate(yrmo = as.yearmon(paste(`"year"`,`"month"`, sep="-"))) %>% 
-  rename(lai = `"cdf.psn_to_cpool"`, month = `"month"`, run=`"run"`, year=`"year"`) %>% 
+  rename(lai = `"epv.proj_lai"`, month = `"month"`, run=`"run"`, year=`"year"`) %>% 
   group_by(run, year) %>% 
   reframe(lai_mo = month[lai==max(lai)]) %>%
   group_by(run) %>% 
@@ -262,7 +262,7 @@ ggplot(parm_veg_state) + geom_boxplot(aes(x=as.factor(month_psn), y=value, group
 
 # filter by month 
 parm.mo_filt_c4 = parm_veg_state %>% 
-  dplyr::filter(month_psn >= 6 & month_psn <=8)
+  dplyr::filter(month_lai >= 6 & month_lai <=8)
 length(unique(parm.mo_filt_c4$group_id))
 
 
@@ -270,8 +270,8 @@ length(unique(parm.mo_filt_c4$group_id))
 parm_veg_out = parm_strat %>% 
   dplyr::filter(`"veg_parm_ID"`==3) %>%
   group_by(`"run"`) %>% 
-  summarise(height = mean(`"epv.height"`)*100,
-            rz_depth = mean(`"rootzone.depth"`)*100,
+  summarise(height = mean(`"epv.height"`),
+            rz_depth = mean(`"rootzone.depth"`),
             psn = mean(`"cdf.psn_to_cpool"`),
             trans = mean(`"trans"`), 
             lai_mn = mean(`"epv.proj_lai"`),
@@ -298,13 +298,15 @@ parm_veg_out.filt %>%
 
 
 parm_veg_out.filt_ht = parm_veg_out.filt %>% 
-  dplyr::filter(height >= 2.5 & height<11) 
+  dplyr::filter(height >= 0.025 & height< 0.11) 
 
 length(unique(parm_veg_out.filt_ht$group_id))
 
 saveRDS(parm_veg_out.filt_ht, paste(outdir, "c4_output_parm.rds", sep=""))
 
-
+ps = parm_strat[parm_strat$`"run"` %in% parm_veg_out.filt_ht$group_id,] %>%
+  dplyr::filter(`"veg_parm_ID"`==3)
+saveRDS(ps, paste(outdir, "filtered_output.rds", sep=""))
 
 ##### below is old 
 

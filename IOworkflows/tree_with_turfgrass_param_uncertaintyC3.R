@@ -85,7 +85,7 @@ saveRDS(parm_df, "../out/tgrass50/c3/turfgrass_parmsc3.rds")
 #                                def_evr = "../defs/veg_liveoak.def", 
 #                                def_tg = "../defs/turfgrass.def")
 option_sets_def_par = list(parm_df)
-names(option_sets_def_par) <- c(def_tg = "../defs/turfgrass.def")
+names(option_sets_def_par) <- c(def_tg = "../defs/turfgrass-C3.def")
 
 # inputs 
 rhv = "/Users/rtorres/RHESSys-rt/rhessys/rhessys7.4"
@@ -199,7 +199,7 @@ system.time(
 #----check parameter sensitivity ####
 #####################################
 
-parm_strat = readr::read_table(paste(outdir, "param_u_strat.csv", sep="")) 
+parm_strat = readr::read_table("../mod_data/c3/twostratum/param_u_strat.csv") 
 
 # plot time series 
 parm_strat %>% dplyr::filter(parm_strat$`"veg_parm_ID"`==3) %>% 
@@ -228,8 +228,8 @@ parm_veg_state = parm_strat %>%
   group_by(run) %>% 
   summarise(month_lai = mean(lai_mo)) %>% 
   rename(group_id = run) %>%
-  inner_join(parm_df, by="group_id") %>% 
-  pivot_longer(cols=names(parms0)) %>% 
+  # inner_join(parm_df, by="group_id") %>% 
+  # pivot_longer(cols=names(parms0)) %>% 
   mutate(month_psn = round(month_lai))
 
 ggplot(parm_veg_state) + geom_boxplot(aes(x=as.factor(month_psn), y=value, group=month_psn)) + 
