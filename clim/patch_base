@@ -1,0 +1,17 @@
+102     base_station_id
+100.0     x_coordinate
+100.0     y_coordinate
+650.0     z_coordinate
+3.5     effective_lai
+10.0     screen_height
+annual     annual_climate_prefix
+0     number_non_critical_annual_sequences
+monthly     monthly_climate_prefix
+0     number_non_critical_monthly_sequences
+../clim/sb_mc_daily     daily_climate_prefix
+0     
+hourly     hourly_climate_prefix
+0     
+../clim/sb_irr_climfiles/biweek_baseline.spin 
+1     
+irrigation     number_non_critical_daily_sequences
