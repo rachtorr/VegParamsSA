@@ -228,8 +228,8 @@ parm_veg_state = parm_strat %>%
   group_by(run) %>% 
   summarise(month_lai = mean(lai_mo)) %>% 
   rename(group_id = run) %>%
-  # inner_join(parm_df, by="group_id") %>% 
-  # pivot_longer(cols=names(parms0)) %>% 
+  inner_join(parm_df, by="group_id") %>% 
+  pivot_longer(cols=names(parms0)) %>% 
   mutate(month_psn = round(month_lai))
 
 ggplot(parm_veg_state) + geom_boxplot(aes(x=as.factor(month_psn), y=value, group=month_psn)) + 

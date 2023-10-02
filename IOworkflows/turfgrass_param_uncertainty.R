@@ -1,51 +1,41 @@
 
-# automatically change worldfile areas (% area and actual amount)
-# automatically change worldfile veg def file in second patch 
-# or use different worldfile for each i.e. make a loop that goes through all of them as a list - within that loop change areas
-# read in the output, add IDs for area and veg, then save to separate file - check irrigation ch2 code for how you did this with adding all to same file
+# scenarios testing 
+# C3 and C4 - need different header files 
+# -- test_msr_tgC4.hdr
+# -- test_msr_tgC3.hdr
+# 2 patch / 2 stratum / 50% pavement 
+# -- test_msr_no_irr_2stratum.world
+# 2 patch / 1 stratum / 50% pavement 
+# -- test_msr_no_irr_tgrass-only.world
+# 2 patch / 2 stratum / 50% pavement / irrigation - clim file needs to change, also basestation worldfiles - this is not set up here - need irrigation in rhessys set up
+# -- test_msr_2stratum.irr.world
+# -- clim file: patch_base 
+# 2 patch / 1 stratum / 50% pavement / irrigation - clim file 
+# 3 patch / 2 stratum / 25% pavement 
+# -- test_msr_no_irr_3fam.world (need to change areas)
 
 setwd("~/VegParamsSA/scripts/")
 library(RHESSysIOinR)
 library(tidyverse)
 library(sensitivity)
 library(randtoolbox)
-
+library(zoo)
 
 # load in turfgrass params 
 tp = read.csv("../defs/tgrass_filtered_parms.csv")
-tp_adj = tp[,3:13]
-
-parm_df = tp_adj %>% dplyr::select(-run)
-n = nrow(tp_adj)
-
-# set up new SA with parameter constraints 
-n = 200
-parms0 <- list(
-  epc.height_to_stem_coef = c(0.1, 0.3), 
-  epc.proj_sla = c(11.5, 36), # bijoor et al 2014
-  epc.max_root_depth = c(0.07, 1.52),
-  epc.storage_transfer_prop = c(0.25, 0.4),
-  epc.waring_pa = c(0.3, 0.5),
-  epc.gl_smax = c(0.004, 0.012), # reyes et al. 2017
-  epc.day_leafoff = c(90, 151),
-  epc.day_leafon = c(244, 305),
-  epc.ndays_expand =  c(14, 60),
-  epc.ndays_litfall =  c(14, 60),
-  epc.alloc_prop_day_growth = c(0.5, 0.7))
-
-get_parms <- sensitivity::parameterSets(parms0, samples=200, method="sobol")
-
-parm_df <- data.frame(get_parms)
-colnames(parm_df) <- names(parms0)
-
 
 # inputs 
 rhv = "/Users/rtorres/RHESSys-rt/rhessys/rhessys7.4"
-world = "../worldfiles/test_msr_no_irr_tgrass-only.world" 
 tec= "../tecfiles/tec.spinup"
 str = "1989 10 1 1"
 end = "1999 10 1 1"
 cmd = "-g -vmort_off -of watbal_of.yml -v -6 -climrepeat"
+
+# what's being changed 
+world = c("../worldfiles/test_msr_no_irr_2stratum.world",
+          "test_msr_no_irr_tgrass-only.world")
+hdr = c("test_msr_tgC4.hdr", "test_msr_tgC3.hdr")
+
 
 # saving here
 outdir = "../out/tgrass50/"
@@ -57,7 +47,7 @@ for (bb in seq_along(1:n)){
                   par_sets = parm_df[bb,],
                   file_name_ext = "")
   
-    print(paste("New def file written for file ../defs/turfgrass/turfgrass_.def"))
+    print(paste("New def file written for file", def_file[bb]))
   
     print(paste("----------------- Run", bb ,"of", n, "-----------------"))
 

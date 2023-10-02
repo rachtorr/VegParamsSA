@@ -62,13 +62,13 @@ veg <- p2[,3:34]
 # load in turfgrass params 
 # set up new SA with parameter constraints 
 parms0 <- list(
-  epc.height_to_stem_coef = c(0.18, 1), 
-  epc.proj_sla = c(23, 34), # bijoor et al 2014 31.3 for C4
+  epc.height_to_stem_coef = c(0.22, 1), 
+  epc.proj_sla = c(25, 34), # bijoor et al 2014 31.3 for C4
   epc.max_root_depth = c(0.8, 1.51),
-  epc.waring_pa = c(0.2, 1),
+  epc.waring_pa = c(0.6, 1),
   epc.gl_smax = c(0.004, 0.012), # reyes et al. 2017
-  epc.day_leafoff = c(290, 320),
-  epc.day_leafon = c(80, 120),
+  epc.day_leafoff = c(280, 320),
+  epc.day_leafon = c(100, 120),
   epc.ndays_expand =  c(15, 40),
   epc.ndays_litfall =  c(15, 40),
   epc.alloc_prop_day_growth = c(0.2, 0.65),
@@ -86,7 +86,7 @@ saveRDS(parm_df, "../out/tgrass50/c4/turfgrass_parmsC4.rds")
 #                                def_evr = "../defs/veg_liveoak.def", 
 #                                def_tg = "../defs/turfgrass.def")
 option_sets_def_par = list(parm_df)
-names(option_sets_def_par) <- c(def_tg = "../defs/turfgrass.def")
+names(option_sets_def_par) <- c(def_tg = "../defs/turfgrass-C4.def")
 
 # inputs 
 rhv = "/Users/rtorres/RHESSys-rt/rhessys/rhessys7.4"
@@ -194,13 +194,11 @@ system.time(
 )
 
 
-# make sure to change the days of litfall and growth 
-
 #####################################
 #----check parameter sensitivity ####
 #####################################
 
-parm_strat = readr::read_table("../mod_data/c4/param_u_strat.csv") 
+parm_strat = readr::read_table(paste(outdir, "param_u_strat.csv", sep="")) 
 
 # plot time series 
 parm_strat %>% dplyr::filter(parm_strat$`"veg_parm_ID"`==3) %>% 
@@ -236,33 +234,15 @@ parm_veg_state = parm_strat %>%
   rename(group_id = run) %>%
   inner_join(parm_df, by="group_id") %>% 
   pivot_longer(cols=names(parms0)) %>% 
-  mutate(month_psn = round(month_lai))
+  mutate(month_lai = round(month_lai))
 
-ggplot(parm_veg_state) + geom_boxplot(aes(x=as.factor(month_psn), y=value, group=month_psn)) + 
-  facet_wrap('name', scales='free') + 
-  coord_flip()
-
-# get month when PSN is the highest and the lowest 
-parm_veg_state = parm_strat %>% 
-  dplyr::filter(`"veg_parm_ID"`==3) %>%
-  mutate(yrmo = as.yearmon(paste(`"year"`,`"month"`, sep="-"))) %>% 
-  rename(lai = `"epv.proj_lai"`, month = `"month"`, run=`"run"`, year=`"year"`) %>% 
-  group_by(run, year) %>% 
-  reframe(lai_mo = month[lai==max(lai)]) %>%
-  group_by(run) %>% 
-  summarise(month_lai = mean(lai_mo)) %>% 
-  rename(group_id = run) %>%
-  inner_join(parm_df, by="group_id") %>% 
-  pivot_longer(cols=names(parms0)) %>% 
-  mutate(month_psn = round(month_lai))
-
-ggplot(parm_veg_state) + geom_boxplot(aes(x=as.factor(month_psn), y=value, group=month_psn)) + 
+ggplot(parm_veg_state) + geom_boxplot(aes(x=as.factor(month_lai), y=value, group=month_lai)) + 
   facet_wrap('name', scales='free') + 
   coord_flip()
 
 # filter by month 
 parm.mo_filt_c4 = parm_veg_state %>% 
-  dplyr::filter(month_lai >= 6 & month_lai <=8)
+  dplyr::filter(month_lai >= 6 & month_lai <=8) 
 length(unique(parm.mo_filt_c4$group_id))
 
 
