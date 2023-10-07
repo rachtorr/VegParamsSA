@@ -1,3 +1,4 @@
+setwd("../")
 
 parm_stratc3 = readRDS("../out/tgrass50/c3/filtered_output.rds") %>% 
   mutate(phen="drt-c3")
@@ -47,11 +48,11 @@ allout %>%
 
 allout %>% 
   group_by(phen) %>% 
-  ggplot() + geom_boxplot(aes(x=phen, y=`"epv.height"`, col=`"type"`))
+  ggplot() + geom_boxplot(aes(x=phen, y=`"epv.height"`))
 
 allout %>% 
   group_by(phen) %>% 
-  ggplot() + geom_boxplot(aes(x=phen, y=`"rootzone.depth"`, col=`"type"`))
+  ggplot() + geom_boxplot(aes(x=phen, y=`"rootzone.depth"`))
 
 allout %>% group_by(`"year"`, `"run"`, phen) %>% 
   summarise(trans_ann = sum(`"trans"`)) %>% 

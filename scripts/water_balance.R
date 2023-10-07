@@ -95,14 +95,18 @@ ggplot(strat) + geom_line(aes(x=date, y=trans, col=as.factor(patchID)))
 # make an msr test patch with 1 tree and 1 grass (i.e. edit the 3fam worldfile and takeout impervious)
 wb_p = strat
 # check on vegetation growth
-ggplot(wb_p) + geom_line(aes(x=date, y=epv.height, col=as.factor(patchID)))
+ggplot(wb_p) + geom_line(aes(x=date, y=epv.height, col=as.factor(veg_parm_ID)))
 ggplot(wb_p) + geom_line(aes(x=date, y=cs.live_stemc, col=as.factor(patchID)))
-ggplot(wb_p) + geom_line(aes(x=date, y=cs.totalc, col=as.factor(patchID)))
-ggplot(wb_p) + geom_line(aes(x=date, y=epv.proj_lai, col=as.factor(patchID)))
-ggplot(wb_p) + geom_line(aes(x=date, y=rootzone.depth, col=as.factor(patchID)))
-ggplot(wb_p) + geom_line(aes(x=date, y=trans, col=as.factor(patchID))) 
-ggplot(wb_p) + geom_line(aes(x=date, y=cdf.psn_to_cpool, col=as.factor(patchID)))
-ggplot(wb_p) + geom_line(aes(x=date, y=npp, col=as.factor(patchID)))
+ggplot(wb_p) + geom_line(aes(x=date, y=cs.totalc, col=as.factor(veg_parm_ID)))
+ggplot(wb_p) + geom_line(aes(x=date, y=epv.proj_lai, col=as.factor(veg_parm_ID)))
+ggplot(wb_p) + geom_line(aes(x=date, y=rootzone.depth, col=as.factor(veg_parm_ID)))
+ggplot(wb_p) + geom_line(aes(x=date, y=rootc, col=as.factor(veg_parm_ID)))
+ggplot(wb_p) + geom_line(aes(x=date, y=cs.frootc, col=as.factor(veg_parm_ID)))
+
+# fluxes 
+ggplot(wb_p) + geom_line(aes(x=date, y=trans, col=as.factor(veg_parm_ID))) 
+ggplot(wb_p) + geom_line(aes(x=date, y=cdf.psn_to_cpool, col=as.factor(veg_parm_ID)))
+ggplot(wb_p) + geom_line(aes(x=date, y=npp, col=as.factor(veg_parm_ID)))
 
 
 ## zoom in time 

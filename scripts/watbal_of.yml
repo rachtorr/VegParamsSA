@@ -111,7 +111,6 @@ filter:
 		ns.totaln,
 		APAR_direct,
 		APAR_diffuse,
-		PAR_after_reflection,
 		ppfd_sunlit,
 		ppfd_shade
 
