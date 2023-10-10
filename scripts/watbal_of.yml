@@ -122,4 +122,15 @@ filter:
 		APAR_direct,
 		APAR_diffuse,
 		ppfd_sunlit,
-		ppfd_shade
+		ppfd_shade,
+		rain_stored,
+		snow_stored,
+		canopy_drip, 
+		cover_fraction, 
+		rootzone.field_capacity,		
+rootzone.potential_sat,		
+rootzone.sat,		
+rootzone.unsat,		
+rootzone.depth,		
+rootzone.preday_depth,		
+rootzone.S

@@ -22,8 +22,10 @@ change_wf_area <- function(worldfile, pct_area_list, patchids){
 }
 
 
+
+### --- function for reading in basin output and plotting --- ### 
 watbal_wrapper = function(file){
-  tmp = read.csv("~/VegParamsSA/out/wb_bas.csv")
+  tmp = read.csv(file)
   bas = tmp %>% mutate(canopy_snow_stored = snow_stored,
                  canopy_rain_stored = rain_stored) %>% 
     watbal_basin_of() %>% 
@@ -34,8 +36,10 @@ watbal_wrapper = function(file){
   return(list(df = bas, plot=plot))
 }
 
-# function for running water balance for single patch
-patch_balance_of = function (pd){
+
+
+### --- function for running water balance for single patch --- ###
+patch_balance_of = function (pd, cd){
   
   pd$trans_sat = pd$transpiration_sat_zone
   pd$trans_unsat = pd$transpiration_unsat_zone
@@ -48,9 +52,9 @@ patch_balance_of = function (pd){
   pd$sd = with(pd, sat_deficit - 
                  rz_storage - 
                  unsat_storage)
-  pd$weighted_snow_stored = pd$snow_stored 
-  pd$weighted_rain_stored = pd$rain_stored 
-  tmp = pd %>% group_by(zoneID, hillID, basinID, patchID, day, 
+  cd$weighted_snow_stored = cd$snow_stored*cd$cover_fraction
+  cd$weighted_rain_stored = cd$rain_stored*cd$cover_fraction 
+  tmp = cd %>% group_by(zoneID, hillID, basinID, patchID, day, 
                         month, year) %>% summarize(can_snow_stored = sum(weighted_snow_stored), 
                                                    can_rain_stored = sum(weighted_rain_stored))
   pd = left_join(pd, tmp[, c("basinID", "hillID", "zoneID", 
