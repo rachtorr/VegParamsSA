@@ -5,8 +5,8 @@
 0.435000       porosity_0
 4000.000000       porosity_decay
 0.000000       P3
-0.195342443636619       pore_size_index
-0.207765849940479       psi_air_entry
+0.195656292601489       pore_size_index
+0.172229310164694       psi_air_entry
 0.010000       psi_max
 10.000000       soil_depth
 0.400000       m_z

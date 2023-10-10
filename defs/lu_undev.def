@@ -6,7 +6,7 @@
 0.000000	   septic_water_load
 7.000000           PH
 0.000000	   detention_store_size
-1		drip_irr 
+0		drip_irr 
 1		surf_g 
 0		surface_routing_threshold 
 1 		sh_l

@@ -1,6 +1,8 @@
 
+# surface msr turned on
 # automatically change worldfile areas (% area and actual amount)
-# vary tree params and turfgrass params 
+# with parameter uncertainty for tree and C4 grass (longer roots)
+# different area of pavement in patch family, irrigation on v. off in veg patch
 
 setwd("~/VegParamsSA/scripts/")
 library(RHESSysIOinR)
@@ -9,7 +11,7 @@ library(sensitivity)
 library(randtoolbox)
 source("../R/surface_msr_helper_funcs.R")
 
-n = 500
+n = 50
 
 # load in tree params 
 treepu = read.csv("../defs/quag_params.csv") 
@@ -60,51 +62,53 @@ veg <- p2[,3:34]
 
 # load in turfgrass params 
 # set up new SA with parameter constraints 
-parms0 <- list(
-  epc.height_to_stem_coef = c(0.18, 1), 
-  epc.proj_sla = c(18, 27), # bijoor et al 2014 23.2 for fescue 
-  epc.max_root_depth = c(0.21, 0.5),
-  epc.waring_pa = c(0.2, 1),
-  epc.gl_smax = c(0.004, 0.012), # reyes et al. 2017
-  epc.day_leafoff = c(305, 335),
-  epc.day_leafon = c(244, 300),
-  epc.ndays_expand =  c(15, 40),
-  epc.ndays_litfall =  c(15, 40),
-  epc.alloc_prop_day_growth = c(0.2, 0.65),
-  epc.storage_transfer_prop = c(0.25, 0.7),
-  epc.leaf_turnover = c(6, 12),
-  epc.froot_turnover = c(0.3, 1.1))
+# parms0 <- list(
+#   epc.height_to_stem_coef = c(0.18, 1), 
+#   epc.proj_sla = c(18, 27), # bijoor et al 2014 23.2 for fescue 
+#   epc.max_root_depth = c(0.21, 0.5),
+#   epc.waring_pa = c(0.2, 1),
+#   epc.gl_smax = c(0.004, 0.012), # reyes et al. 2017
+#   epc.day_leafoff = c(305, 335),
+#   epc.day_leafon = c(244, 300),
+#   epc.ndays_expand =  c(15, 40),
+#   epc.ndays_litfall =  c(15, 40),
+#   epc.alloc_prop_day_growth = c(0.2, 0.65),
+#   epc.storage_transfer_prop = c(0.25, 0.7),
+#   epc.leaf_turnover = c(6, 12),
+#   epc.froot_turnover = c(0.3, 1.1))
+# 
+# get_parms <- sensitivity::parameterSets(parms0, samples=n, method="sobol")
+# parm_df <- cbind(data.frame(get_parms), group_id = 1:n)
+# colnames(parm_df) <- c(names(parms0), "group_id")
+# saveRDS(parm_df, "../out/tgrass50/c3/turfgrass_parmsc3.rds")
 
-get_parms <- sensitivity::parameterSets(parms0, samples=n, method="sobol")
-parm_df <- cbind(data.frame(get_parms), group_id = 1:n)
-colnames(parm_df) <- c(names(parms0), "group_id")
-saveRDS(parm_df, "../out/tgrass50/c3/turfgrass_parmsc3.rds")
+c4params = readRDS("../out/tgrass50/c4/turfgrass_parmsC4.rds")
+parm_df = c4params
 
-#option_sets_def_par = list(soils, veg, parm_df)
-#names(option_sets_def_par) <- c(def_soil = "../defs/shallow.def", 
-#                                def_evr = "../defs/veg_liveoak.def", 
-#                                def_tg = "../defs/turfgrass.def")
-option_sets_def_par = list(parm_df)
-names(option_sets_def_par) <- c(def_tg = "../defs/turfgrass-C3.def")
+option_sets_def_par = list(soils, veg, parm_df)
+names(option_sets_def_par) <- c(def_soil = "../defs/shallow.def", 
+                                def_evr = "../defs/veg_liveoak.def", 
+                                def_tg = "../defs/turfgrass-C4.def")
 
 # inputs 
 rhv = "/Users/rtorres/RHESSys-rt/rhessys/rhessys7.4"
 world = "../worldfiles/test_msr_no_irr_2stratum.world" 
+world_irr = "../worldfiles/test_msr_2stratum.irr.world"
 tec= "../tecfiles/tec.spinup"
 str = "1989 10 1 1"
 end = "1995 10 1 1"
 cmd = "-g -vmort_off -of watbal_of.yml -climrepeat -msr"
 
 # saving here
-outdir = "../out/tgrass50/c3/"
-msr_flag="on"
+outdir = "../out/msr_on_2strat/"
+#msr_flag="on"
 
 # area changes - testing with two patch, two stratum 
 pids = c(60853701, 60853702)
 pct_areas = list(c(0.5, 0.5),
                  c(0.25, 0.75),
                  c(0.75, 0.25))
-pct_areas = list(c(0.5, 0.5))
+#pct_areas = list(c(0.5, 0.5))
 
 # start here to run loop - loop 1 is worldfile, then sequence through parameter sets 
 system.time(
@@ -127,7 +131,8 @@ system.time(
     }
       
       print(paste("----------------- Run", bb ,"of", n, "-----------------"))
-  
+    
+      # without irrigation 
       rhessys_command(rhessys_version = rhv,
                       world_file = world,
                       world_hdr_file = "../worldfiles/test_msr.hdr",
@@ -135,68 +140,107 @@ system.time(
                       flow_file = "../flowtables/test_msr.flow",
                       start_date = str,
                       end_date = end,
-                      output_file = "../out/msr_tests",
+                      output_file = outdir,
                       input_parameters = "-s 0.0363 359.486 -sv 0.0363 359.486 -gw 0.346 0.416",
                       command_options = cmd)
       
-      # save basin output 
-      # output <- read.csv("../out/wb_bas.csv")
-      # tmp = mkdate(output) %>% 
-      #   mutate(canopy_snow_stored = snow_stored,                                           canopy_rain_stored = rain_stored, 
-      #          run = bb,
-      #          msr = msr_flag,
-      #          veg_area = unlist(pct_areas[aa])[1]) %>%
-      #   watbal_basin_of()
-      # 
-      # if(bb==1 & aa==1){
-      #   write.table(as.data.frame(tmp), file=paste(outdir, "param_u_bas.csv", sep=""), append=F, row.names = FALSE)
-      # }else{
-      #   write.table(as.data.frame(tmp), file=paste(outdir, "param_u_bas.csv", sep=""), append=T, col.names = FALSE, row.names = FALSE)
-      # }
+     # save basin output
+      output <- read.csv(paste(outdir,"wb_bas.csv", sep=""))
+      tmp = mkdate(output) %>%
+        mutate(canopy_snow_stored = snow_stored,                                           canopy_rain_stored = rain_stored,
+               run = bb,
+               irr="off",
+               grasstype = "C4",
+               veg_area = paste("area", unlist(pct_areas[aa])[1], sep="_")) %>%
+        watbal_basin_of()
+
+      if(bb==1 & aa==1){
+        write.table(as.data.frame(tmp), file=paste(outdir, "bas.csv", sep=""), append=F, row.names = FALSE)
+      }else{
+        write.table(as.data.frame(tmp), file=paste(outdir, "bas.csv", sep=""), append=T, col.names = FALSE, row.names = FALSE)
+      }
       
       # aggregate and save stratum output 
-      output2 <- read.csv("../out/wb_strat.csv")
+      output2 <- read.csv(paste(outdir,"wb_strat.csv", sep=""))
       tmp = mkdate(output2) %>% 
         mutate(run = bb,
-               msr = msr_flag,
-               type = "c3",
-               veg_area = unlist(pct_areas[aa])[1]) %>% 
-        dplyr::filter(year > 1992)
-      
-      # %>% 
-        # group_by(month, year, run, msr, type, veg_area, veg_parm_ID) %>% 
-        # summarise(lai = mean(epv.proj_lai),
-        #           height = mean(epv.height),
-        #           rz_depth = mean(rootzone.depth),
-        #           psn = mean(cdf.psn_to_cpool),
-        #           trans = mean(trans))
+               irr="off",
+               grasstype = "C4",
+               veg_area = paste("area", unlist(pct_areas[aa])[1], sep="_")) 
       
       if(bb==1 & aa==1){
-        write.table(as.data.frame(tmp), file=paste(outdir, "param_u_strat.csv", sep=""), append=F, row.names = FALSE)
+        write.table(as.data.frame(tmp), file=paste(outdir, "strat.csv", sep=""), append=F, row.names = FALSE)
       }else{
-        write.table(as.data.frame(tmp), file=paste(outdir, "param_u_strat.csv", sep=""), append=T, col.names = FALSE, row.names = FALSE)}
+        write.table(as.data.frame(tmp), file=paste(outdir, "strat.csv", sep=""), append=T, col.names = FALSE, row.names = FALSE)}
       
-      # save patch output 
-      # output3 <- read.csv("../out/wb_p.csv")
-      # tmp = mkdate(output3) %>% 
-      #   mutate(run = bb,
-      #          msr = msr_flag,
-      #          veg_area = unlist(pct_areas[aa])[1])
-      # 
-      # if(bb==1 & aa==1){
-      #   write.table(as.data.frame(tmp), file=paste(outdir, "param_u_p.csv", sep=""), append=F, row.names = FALSE)
-      # }else{
-      #   write.table(as.data.frame(tmp), file=paste(outdir, "param_u_p.csv", sep=""), append=T, col.names = FALSE, row.names = FALSE)}
-    
-  
+     # save patch output
+      output3 <- read.csv(paste(outdir,"wb_p.csv", sep=""))
+      tmp = mkdate(output3) %>%
+        mutate(run = bb,
+               irr="off",
+               grasstype = "C4",
+               veg_area = paste("area", unlist(pct_areas[aa])[1], sep="_"))
+
+      if(bb==1 & aa==1){
+        write.table(as.data.frame(tmp), file=paste(outdir, "pat.csv", sep=""), append=F, row.names = FALSE)
+      }else{
+        write.table(as.data.frame(tmp), file=paste(outdir, "pat.csv", sep=""), append=T, col.names = FALSE, row.names = FALSE)}
+      
+      ##### run same scenarios but with irrigation 
+      rhessys_command(rhessys_version = rhv,
+                      world_file = world_irr,
+                      world_hdr_file = "../worldfiles/test_msr_tgC4.hdr",
+                      tec_file = tec,
+                      flow_file = "../flowtables/test_msr.flow",
+                      start_date = str,
+                      end_date = end,
+                      output_file = outdir,
+                      input_parameters = "-s 0.0363 359.486 -sv 0.0363 359.486 -gw 0.346 0.416",
+                      command_options = cmd)
+      
+      # save basin output
+      output <- read.csv(paste(outdir,"wb_bas.csv", sep=""))
+      tmp = mkdate(output) %>%
+        mutate(canopy_snow_stored = snow_stored,                                           canopy_rain_stored = rain_stored,
+               run = bb,
+               irr="on",
+               grasstype = "C4",
+               veg_area = paste("area", unlist(pct_areas[aa])[1], sep="_")) %>%
+        watbal_basin_of()
+      
+      write.table(as.data.frame(tmp), file=paste(outdir, "bas.csv", sep=""), append=T, col.names = FALSE, row.names = FALSE)
+      
+      # aggregate and save stratum output 
+      output2 <- read.csv(paste(outdir,"wb_strat.csv", sep=""))
+      tmp = mkdate(output2) %>% 
+        mutate(run = bb,
+               irr="on",
+               grasstype = "C4",
+               veg_area = paste("area", unlist(pct_areas[aa])[1], sep="_")) 
+      
+        write.table(as.data.frame(tmp), file=paste(outdir, "strat.csv", sep=""), append=T, col.names = FALSE, row.names = FALSE)
+      
+      # save patch output
+      output3 <- read.csv(paste(outdir,"wb_p.csv", sep=""))
+      tmp = mkdate(output3) %>%
+        mutate(run = bb,
+               irr="on",
+               grasstype = "C4",
+               veg_area = paste("area", unlist(pct_areas[aa])[1], sep="_"))
+      
+        write.table(as.data.frame(tmp), file=paste(outdir, "pat.csv", sep=""), append=T, col.names = FALSE, row.names = FALSE)
+
   }
 }
 )
 
-# make sure to change the days of litfall and growth 
+strat <- read.csv("~/VegParamsSA/out/msr_on_2strat/strat.csv", sep="")
+
+bas =  read.csv("~/VegParamsSA/out/msr_on_2strat/strat.csv", sep="")
+
 
 #####################################
-#----check parameter sensitivity ####
+#----check turfgrass parameter sensitivity ####
 #####################################
 
 parm_strat = readr::read_table("../mod_data/c3/twostratum/param_u_strat.csv") 

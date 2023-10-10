@@ -12,20 +12,20 @@ library(lubridate)
 library(RHESSysIOinR)
 source("/Volumes/GoogleDrive/My Drive/help_with_rhessys/watbal.R")
 library(here)
-dir = "out/tgrass50/msr_on"
+dir = "out/msr_on_2strat"
 ```
 
 
 ```{r basin, echo=FALSE}
 
-wb_bas = readr::read_delim(here(dir,"param_u_bas.csv")) 
+wb_bas = readr::read_delim(here(dir,"bas.csv")) 
 
 watbal = wb_bas %>% 
-  dplyr::filter(year==2019) %>% 
-  group_by(date, veg_area) %>% 
+  dplyr::filter(year==1995) %>% 
+  group_by(date, veg_area, irr) %>% 
   summarize(balance = mean(watbal)) 
 
-ggplot(watbal) + geom_point(aes(x=date, y=balance)) + ggtitle("basin water balance") + facet_grid("veg_area")
+ggplot(watbal) + geom_point(aes(x=date, y=balance)) + ggtitle("basin water balance") + facet_grid(irr~veg_area)
 
 ```
 
@@ -43,25 +43,24 @@ patchIDs:
 - 60853702 = pavement
 
 ```{r patch, echo=FALSE}
-wb_p = readr::read_delim(here(dir,"param_u_p.csv")) 
-wb_p2 = readr::read_delim(here(dir, "../param_u_p.csv"))
+wb_p = readr::read_delim(here(dir,"pat.csv")) 
 
-patchout = rbind(wb_p, wb_p2) %>% group_by(year, msr, veg_area, patchID) %>% summarise_all(mean)
+patchout = wb_p %>% group_by(year, veg_area, patchID, irr, grasstype) %>% summarise_all(mean)
 
 # plot boxplots 
-ggplot(patchout) + geom_boxplot(aes(x=as.factor(patchID), y=surface_transfer, col=as.factor(veg_area))) + facet_grid('msr')
+ggplot(patchout) + geom_boxplot(aes(x=as.factor(patchID), y=surface_transfer, col=as.factor(veg_area))) + facet_grid(veg_area~irr)
 
-ggplot(patchout) + geom_boxplot(aes(x=as.factor(patchID), y=rz_storage, col=as.factor(veg_area))) + facet_grid('msr')
+ggplot(patchout) + geom_boxplot(aes(x=as.factor(patchID), y=rz_storage, col=as.factor(veg_area))) + facet_grid(veg_area~irr)
 
-ggplot(patchout) + geom_boxplot(aes(x=as.factor(patchID), y=unsat_storage, col=as.factor(veg_area))) + facet_grid('msr')
+ggplot(patchout) + geom_boxplot(aes(x=as.factor(patchID), y=unsat_storage, col=as.factor(veg_area))) + facet_grid(veg_area~irr)
 
-ggplot(patchout) + geom_boxplot(aes(x=as.factor(patchID), y=streamflow, col=as.factor(veg_area))) + facet_grid('msr')
+ggplot(patchout) + geom_boxplot(aes(x=as.factor(patchID), y=streamflow, col=as.factor(veg_area))) + facet_grid(veg_area~irr)
 
-ggplot(patchout) + geom_boxplot(aes(x=as.factor(patchID), y=evap, col=as.factor(veg_area))) + facet_grid('msr')
+ggplot(patchout) + geom_boxplot(aes(x=as.factor(patchID), y=evap, col=as.factor(veg_area))) + facet_grid(veg_area~irr)
 
-ggplot(patchout) + geom_boxplot(aes(x=as.factor(patchID), y=rootzone.S, col=as.factor(veg_area))) + facet_grid('msr')
+ggplot(patchout) + geom_boxplot(aes(x=as.factor(patchID), y=rootzone.S, col=as.factor(veg_area))) + facet_grid(veg_area~irr)
 
-ggplot(patchout) + geom_boxplot(aes(x=as.factor(patchID), y=rootzone.field_capacity, col=as.factor(veg_area))) + facet_grid('msr')
+ggplot(patchout) + geom_boxplot(aes(x=as.factor(patchID), y=rootzone.field_capacity, col=as.factor(veg_area))) + facet_grid(veg_area~irr)
 
 
 ```
@@ -70,30 +69,30 @@ ggplot(patchout) + geom_boxplot(aes(x=as.factor(patchID), y=rootzone.field_capac
 
 ```{r msr, echo=FALSE}
 
-strat = readr::read_delim(here(dir, "param_u_strat.csv"))
-strat2 = readr::read_delim(here(dir, "../param_u_strat.csv"))
+strat = readr::read_delim(here(dir, "strat.csv"))
 
-stratout = rbind(strat2) %>% 
-  group_by(year, msr, veg_area, veg_parm_ID) %>% 
+
+stratout = strat %>% 
+  group_by(year, veg_area, veg_parm_ID, irr, grasstype) %>% 
   summarise_all(mean) %>% 
   mutate(id = factor(veg_parm_ID, 
                      levels = c(11, 3, 1), 
-                     labels=c("tree", "turfgrass","no veg")))
+                     labels=c("tree", "turfgrass","no veg"))) %>% 
+  dplyr::filter(veg_parm_ID > 1)
   
-ggplot(stratout) + geom_boxplot(aes(x=msr, y=epv.proj_lai, col=id)) + facet_grid("veg_area")
+ggplot(stratout) + geom_boxplot(aes(x=veg_area, y=epv.proj_lai, col=irr)) + facet_grid('id', scales="free")
 
-ggplot(stratout) + geom_boxplot(aes(x=msr, y=epv.height, col=id)) + facet_grid("veg_area")
+ggplot(stratout) + geom_boxplot(aes(x=veg_area, y=epv.height, col=irr)) + facet_grid('id', scales="free")
 
-ggplot(stratout) + geom_boxplot(aes(x=msr, y=rootzone.depth, col=id)) + facet_grid("veg_area")
+ggplot(stratout) + geom_boxplot(aes(x=veg_area, y=rootzone.depth, col=irr)) + facet_grid('id', scales="free")
 
+ggplot(stratout) + geom_boxplot(aes(x=veg_area, y=cs.totalc, col=irr)) + facet_grid('id', scales="free")
 
-ggplot(stratout) + geom_boxplot(aes(x=msr, y=cs.totalc, col=id)) + facet_grid("veg_area")
+ggplot(stratout) + geom_boxplot(aes(x=veg_area, y=trans, col=irr)) + facet_grid('id', scales="free")
 
-ggplot(stratout) + geom_boxplot(aes(x=msr, y=trans, col=id)) + facet_grid("veg_area")
+ggplot(stratout) + geom_boxplot(aes(x=veg_area, y=cdf.psn_to_cpool, col=irr)) + facet_grid('id', scales="free")
 
-ggplot(stratout) + geom_boxplot(aes(x=msr, y=cdf.psn_to_cpool, col=id)) + facet_grid("veg_area")
-
-ggplot(stratout) + geom_boxplot(aes(x=msr, y=npp, col=id)) + facet_grid("veg_area")
+ggplot(stratout) + geom_boxplot(aes(x=veg_area, y=npp, col=irr)) + facet_grid('id', scales="free")
 ```
 
 
