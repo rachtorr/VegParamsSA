@@ -14,6 +14,7 @@ library(tidyverse)
 library(sensitivity)
 library(randtoolbox)
 library(zoo)
+library(patchwork)
 
 # load in turfgrass params 
 # tp = read.csv("../defs/tgrass_filtered_parms.csv")
@@ -26,12 +27,10 @@ parms0 <- list(
   epc.max_root_depth = c(0.21, 0.5),
   epc.waring_pa = c(0.4, 1),
   epc.gl_smax = c(0.004, 0.012), # reyes et al. 2017
-  epc.day_leafoff = c(320, 327),
   epc.day_leafon = c(270, 300),
   epc.ndays_expand =  c(16, 30),
   epc.ndays_litfall =  c(16, 40),
-  epc.alloc_prop_day_growth = c(0.2, 0.65),
-  epc.storage_transfer_prop = c(0.25, 0.7),
+  epc.alloc_prop_day_growth = c(0.5, 0.75),
   epc.froot_cn = c(37, 68), # reyes / calibrated
   epc.leaf_cn = c(40, 54), # reyes / calibrated
   epc.leaf_turnover = c(6, 12)) # ratio not percent 
@@ -39,7 +38,7 @@ parms0 <- list(
 # accounting for not just leaves but seed 
 # higher leaf turnover is all seed 
 
-n=20
+n=1000
 get_parms <- sensitivity::parameterSets(parms0, samples=n, method="sobol")
 parm_df <- cbind(data.frame(get_parms), group_id = 1:n)
 colnames(parm_df) <- c(names(parms0), "group_id")
@@ -67,7 +66,7 @@ option_sets_def_par = list(parm_df)
 #option_sets_def_par = list(option_sets_def_par)
 names(option_sets_def_par) <- c(def_tg = "../defs/turfgrass-C3.def")
 
-n = length(unique(option_sets_def_par$`../defs/turfgrass-C3.def`))
+#n = length(unique(option_sets_def_par$`../defs/turfgrass-C3.def`))
 
 # start loop here 
 system.time(
@@ -161,3 +160,65 @@ system.time(
 check = read.csv("../out/test_tgrass50/c3/param_u_strat.csv", sep="")
 summary(check)
 check$group_id = check$run
+
+  
+# tmp = read.csv("../out/test_tgrass50/c3/param_u_strat_year.csv", sep="")
+# ggplot(tmp) + geom_point(aes(x=yd, y=epv.proj_lai,
+#                              col=epv.psi_ravg)) + facet_wrap("id")
+# 
+# ggplot(tmp) + geom_point(aes(x=yd, y=trans,
+#                              col=epv.psi_ravg)) + facet_wrap("id")
+# 
+# ggplot(tmp) + geom_point(aes(col=month, y=cdf.psn_to_cpool,
+#                              x=epv.psi_ravg)) + facet_wrap("id") + 
+#   scale_color_viridis_c()
+
+pat = read.csv("../out/wb_p.csv")
+rz = ggplot(pat, aes(x=year, y=rz_transfer, col=as.factor(patchID))) + geom_point()
+st = ggplot(pat, aes(x=year, y=surface_transfer, col=as.factor(patchID))) + geom_point()
+st/rz
+
+## negative gpp 
+gpp = check %>% dplyr::filter(gpp.y < 0)
+
+
+
+### parameter output 
+#####################################################################
+
+# need lower npp 
+npp_res = pcc(dplyr::select(parm_df[1:978,],-group_id), check$npp, rank=T)
+npp_res$PRCC$names = rownames(npp_res$PRCC)
+npp_df = npp_res$PRCC[order(npp_res$PRCC$original),]
+ggplot(npp_df) + geom_col(aes(x=original, y=names))
+
+# same for transpiration 
+trans_res = pcc(dplyr::select(parm_df[1:978,],-group_id), check$trans_ann, rank=T)
+trans_res$PRCC$names = rownames(trans_res$PRCC)
+trans_df = trans_res$PRCC[order(trans_res$PRCC$original),]
+ggplot(trans_df) + geom_col(aes(x=original, y=names))
+
+# join output with parameters 
+joined = inner_join(check, parm_df) %>% 
+  dplyr::filter(gpp.y > 0 & npp < 1)
+
+joined %>% pivot_longer(cols=names(parms0)) %>% ggplot(aes(x=value, y=npp)) + geom_point() + facet_wrap("name", scales="free") + geom_smooth(method="lm")
+
+joined %>% pivot_longer(cols=names(parms0)) %>% ggplot(aes(x=value, y=trans_ann)) + geom_point() + facet_wrap("name", scales="free") + geom_smooth(method="lm")
+
+filtered = joined %>% 
+  dplyr::filter(month >=4 & month <=6 &
+                  lai <2.7 &
+                  npp > 0)
+
+nrow(filtered)
+# change froot turnover, storage transfer prop, leaf CN, froot CN
+summary(filtered)
+filt.npp = filtered %>% dplyr::filter(npp < 0.11 & npp>0)
+nrow(filt.npp)
+
+
+filt.npp %>% dplyr::select(-id, -msr) %>% pivot_longer(cols=names(dplyr::select(check,-id, -msr))) %>% ggplot(aes(x=value, y=epc.leaf_dayoff)) + geom_point() + facet_wrap("name", scales="free") + geom_smooth(method="lm")
+
+## save these sets
+saveRDS(filt.npp, file=paste(outdir,"filtered_sets.rds"))

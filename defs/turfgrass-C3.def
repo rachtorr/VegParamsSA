@@ -21,7 +21,7 @@ GRASS          epc.veg.type
 35.000000       epc.tmax
 0.200000       epc.tcoef
 -0.500000       epc.psi_open
--2.300000       epc.psi_close
+-2.50000       epc.psi_close
 0.000000       epc.vpd_open
 3000.000000       epc.vpd_close
 0.01053125       epc.gl_smax
@@ -36,11 +36,11 @@ EVERGREEN       epc.phenology.type
 0.000000       epc.proj_swa
 1.000000       epc.leaf_turnover
 330      epc.day_leafon
-290      epc.day_leafoff
+300      epc.day_leafoff
 24.828125       epc.ndays_expand
 45.40234375       epc.ndays_litfall
 50.000000       epc.leaf_cn
-55.000000       epc.leaflitr_cn
+52.000000       epc.leaflitr_cn
 0.000000       min_heat_capacity
 0.000000       max_heat_capacity
 combined       epc.allocation_flag
@@ -64,7 +64,7 @@ combined       epc.allocation_flag
 0.6474609375       epc.alloc_prop_day_growth
 0.000000       epc.daily_fire_turnover
 1       epc.height_to_stem_exp
-0.14140625       epc.height_to_stem_coef
+1.14140625       epc.height_to_stem_coef
 0.4       epc.root_growth_direction
 4.0000000       epc.root_distrib_parm
 -2.000000       epc.gs_tmin
@@ -74,8 +74,8 @@ combined       epc.allocation_flag
 34200.0000       epc.gs_dayl_min
 45000.0000       epc.gs_dayl_max
 -15     epc.gs_psi_min
--14      epc.gs_psi_max
-14.0       epc.gs_ravg_days
+-14          epc.gs_psi_max
+7.0       epc.gs_ravg_days
 0.5       epc.gsi_thresh
 0         epc.gs_npp_on
 187       epc.gs_npp_slp

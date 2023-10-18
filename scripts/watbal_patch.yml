@@ -1,0 +1,134 @@
+filter:
+	timestep: daily
+	output:
+		format: csv
+		path: "../out"
+		filename: "test_bas"
+	basin:
+		ids: 608537
+		variables: 
+		zone.rain,
+		patch.total_water_in,
+		patch.streamflow,
+    hill.gw.Qout,
+    hill.gw.storage,
+		patch.evaporation,
+		patch.evaporation_surf,
+		patch.exfiltration_sat_zone,
+		patch.exfiltration_unsat_zone,
+		patch.sat_zone_storage,
+    patch.snowpack.water_equivalent_depth,
+		patch.sat_deficit,
+		patch.sat_deficit_z, 
+		patch.rootzone.field_capacity,
+		patch.rz_storage,
+		patch.unsat_storage,
+		patch.detention_store,
+		patch.litter.rain_stored,
+		patch.sat_zone_storage,
+    patch.trans_reduc_perc,
+    patch.rz_drainage,
+    patch.unsat_drainage,
+    patch.recharge,
+    patch.rootzone.potential_sat,
+    patch.rootzone.depth,
+    patch.transpiration_sat_zone, 
+    patch.transpiration_unsat_zone,
+    patch.rain_stored,
+    patch.snow_stored
+
+filter:
+	timestep: daily
+	output:
+		format: csv
+		path: "../out"
+		filename: "test_p"
+	patch:
+		ids: 608537
+		variables: 
+		ID, 
+		family_ID, 
+		rz_transfer,
+		unsat_transfer,
+		surface_transfer,
+		detention_store,
+		evaporation,
+		evaporation_surf,
+		sat_deficit,
+		rz_storage,
+		snow_throughfall,
+		unsat_storage,
+		rootzone.potential_sat,  
+    rootzone.field_capacity,
+		recharge,
+		streamflow,
+		rain_throughfall,
+		preday_detention_store,
+		exfiltration_sat_zone,
+		exfiltration_unsat_zone, 
+		detention_store,
+		unsat_storage,
+		rain_stored, 
+		snow_stored,
+		height, 
+		rootzone.S,
+		sat_deficit_z,
+		rz_drainage,
+		unsat_drainage,
+		field_capacity,
+		patch.Qout,
+    patch.Qout_total,
+    patch.Qin,
+    patch.Qin_total,
+		stratum.transpiration_unsat_zone, 
+		stratum.transpiration_sat_zone,
+		family_pct_cover,
+		litter.rain_stored
+
+filter:
+	timestep: daily
+	output:
+		format: csv
+		path: "../out"
+		filename: "test_strat"
+	stratum:
+		ids: 608537 
+		variables: 
+		veg_parm_ID,
+		cs.totalc,
+		cdf.psn_to_cpool,
+		stemc = cs.live_stemc + cs.dead_stemc,
+		npp = cs.net_psn,
+		rootzone.sat, 
+		rootzone.unsat,
+		stratum.transpiration_unsat_zone, 
+		stratum.transpiration_sat_zone,
+		trans=transpiration_unsat_zone + transpiration_sat_zone,
+		et = evaporation + transpiration_unsat_zone + transpiration_sat_zone, 
+		epv.proj_lai,
+		epv.height,
+		rootzone.depth,
+		resp = cdf.total_mr + cdf.total_gr,
+		cs.leafc,
+		rootc = cs.frootc + cs.live_crootc + cs.dead_crootc,
+		cs.frootc,
+		cs.dead_leafc,
+		cs.leafc_store,
+		ns.totaln,
+		APAR_direct,
+		APAR_diffuse,
+		ppfd_sunlit,
+		ppfd_shade,
+		rain_stored,
+		snow_stored,
+		canopy_drip, 
+		cover_fraction, 
+		rootzone.field_capacity,		
+rootzone.potential_sat,		
+rootzone.sat,		
+rootzone.unsat,		
+rootzone.depth,		
+rootzone.preday_depth,		
+rootzone.S, 
+epv.psi,
+epv.psi_ravg
