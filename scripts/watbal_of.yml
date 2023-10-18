@@ -12,10 +12,6 @@ filter:
 		patch.streamflow,
     hill.gw.Qout,
     hill.gw.storage,
-    patch.Qout,
-    patch.Qout_total,
-    patch.Qin,
-    patch.Qin_total
 		patch.evaporation,
 		patch.evaporation_surf,
 		patch.exfiltration_sat_zone,
@@ -36,10 +32,10 @@ filter:
     patch.recharge,
     patch.rootzone.potential_sat,
     patch.rootzone.depth,
-    stratum.transpiration_sat_zone, 
-    stratum.transpiration_unsat_zone,
-    stratum.rain_stored,
-    stratum.snow_stored
+    patch.transpiration_sat_zone, 
+    patch.transpiration_unsat_zone,
+    patch.rain_stored,
+    patch.snow_stored
 
 filter:
 	timestep: daily
@@ -133,4 +129,6 @@ rootzone.sat,
 rootzone.unsat,		
 rootzone.depth,		
 rootzone.preday_depth,		
-rootzone.S
+rootzone.S, 
+epv.psi,
+epv.psi_ravg

@@ -1,18 +1,12 @@
 
+# vegetation turfgrass C3 parameters 
 # scenarios testing 
 # C3 and C4 - need different header files 
 # -- test_msr_tgC4.hdr
 # -- test_msr_tgC3.hdr
-# 2 patch / 2 stratum / 50% pavement 
-# -- test_msr_no_irr_2stratum.world
-# 2 patch / 1 stratum / 50% pavement 
-# -- test_msr_no_irr_tgrass-only.world
-# 2 patch / 2 stratum / 50% pavement / irrigation - clim file needs to change, also basestation worldfiles - this is not set up here - need irrigation in rhessys set up
-# -- test_msr_2stratum.irr.world
-# -- clim file: patch_base 
-# 2 patch / 1 stratum / 50% pavement / irrigation - clim file 
-# 3 patch / 2 stratum / 25% pavement 
-# -- test_msr_no_irr_3fam.world (need to change areas)
+# 2 patch, 2 stratum in 1 patch (50%)
+# -- test_msr_no_irr_2stratum.VegOnly.world
+# -- clim file: mission_base / patch_base for irrigation 
 
 setwd("~/Desktop/VegParamsSA/scripts/")
 library(RHESSysIOinR)
@@ -22,123 +16,148 @@ library(randtoolbox)
 library(zoo)
 
 # load in turfgrass params 
-tp = read.csv("../defs/tgrass_filtered_parms.csv")
+# tp = read.csv("../defs/tgrass_filtered_parms.csv")
+
+# load in turfgrass params 
+# set up new SA with parameter constraints 
+parms0 <- list(
+  epc.height_to_stem_coef = c(0.2, 1.1), 
+  epc.proj_sla = c(18, 27), # bijoor et al 2014 
+  epc.max_root_depth = c(0.21, 0.5),
+  epc.waring_pa = c(0.4, 1),
+  epc.gl_smax = c(0.004, 0.012), # reyes et al. 2017
+  epc.day_leafoff = c(320, 327),
+  epc.day_leafon = c(270, 300),
+  epc.ndays_expand =  c(16, 30),
+  epc.ndays_litfall =  c(16, 40),
+  epc.alloc_prop_day_growth = c(0.2, 0.65),
+  epc.storage_transfer_prop = c(0.25, 0.7),
+  epc.froot_cn = c(37, 68), # reyes / calibrated
+  epc.leaf_cn = c(40, 54), # reyes / calibrated
+  epc.leaf_turnover = c(6, 12)) # ratio not percent 
+
+# accounting for not just leaves but seed 
+# higher leaf turnover is all seed 
+
+n=20
+get_parms <- sensitivity::parameterSets(parms0, samples=n, method="sobol")
+parm_df <- cbind(data.frame(get_parms), group_id = 1:n)
+colnames(parm_df) <- c(names(parms0), "group_id")
+saveRDS(parm_df, "../out/test_tgrass50/c3/turfgrass_parmsC3.rds")
 
 # inputs 
 rhv = "/Users/rtorres/RHESSys-rt/rhessys/rhessys7.4"
 tec= "../tecfiles/tec.spinup"
 str = "1989 10 1 1"
 end = "1999 10 1 1"
-cmd = "-g -vmort_off -of watbal_of.yml -v -6 -climrepeat -msr"
+cmd = "-g -vmort_off -of watbal_of.yml -climrepeat -msr"
 
 # what's being changed 
-world_tgrass = "../worldfiles/test_msr_no_irr_tgrass-only.world"
-world_fam = "../worldfiles/test_msr_no_irr_3patchfam.world"
+world_tgrass = "../worldfiles/test_msr_irr_2stratum.VegOnly.world"
+flowt = "../flowtables/test_msr.2stratum.50.flow"
 #hdr = c("test_msr_tgC4.hdr", "test_msr_tgC3.hdr")
 hdr = "../worldfiles/test_msr_tgC3.hdr"
 
 # saving here
-outdir = "../out/"
+outdir = "../out/test_tgrass50/c3/"
 msr_flag="on"
 
-for (bb in seq_along(1:n)){
-  
-    change_def_file(def_file = "../defs/turfgrass.def",
-                  par_sets = parm_df[bb,],
-                  file_name_ext = "")
-  
-    print(paste("New def file written for file", def_file[bb]))
-  
-    print(paste("----------------- Run", bb ,"of", n, "-----------------"))
+option_sets_def_par = list(parm_df)
+#option_sets_def_par = readRDS("../out/test_tgrass50/c3/filtered_sets.rds")
+#option_sets_def_par = list(option_sets_def_par)
+names(option_sets_def_par) <- c(def_tg = "../defs/turfgrass-C3.def")
 
+n = length(unique(option_sets_def_par$`../defs/turfgrass-C3.def`))
+
+# start loop here 
+system.time(
+  for (bb in seq_along(1:n)){
+    
+    change_def_file(def_file = names(option_sets_def_par)[1],
+                    par_sets = parm_df[bb,],
+                    file_name_ext = "")
+    
+    print(paste("New def file written for file", names(option_sets_def_par)[1]))
+    
+    print(paste("----------------- Run", bb ,"of", n, "-----------------"))
+    
     # spin up the grass 
     rhessys_command(rhessys_version = rhv,
                     world_file = world_tgrass,
                     world_hdr_file = hdr,
                     tec_file = tec,
-                    flow_file = "../flowtables/test_msr.flow",
+                    flow_file = flowt,
                     start_date = str,
                     end_date = end,
                     output_file = outdir,
                     input_parameters = "-s 0.0363 359.486 -sv 0.0363 359.486 -gw 0.346 0.416",
                     command_options = cmd) 
     
-    # take output worldfiles and re-do as 3fam 
-    data_list <- list()
-    
-    # Open the file for reading
-    file <- "../worldfiles/test_msr_no_irr_tgrass-only.world.Y1995M9D30H1.state"
-    con <- file(file, "r")
-    
-    # Initialize an empty data frame to store the current block of data
-    current_data <- data.frame()
-    
-    line <- readLines(con)
-    # Split the line into two columns based on whitespace
-    parts <- strsplit(trimws(line), "\\s+")
-      
-    # get variables from worldfile
-    
-    
-    # save variables in the other worldfile with patch fam 3
-    
-    # refer to awk if needed 
-    
-    # Close the file
-    close(con)
-    
-    # Combine the data frames into a single data frame
-    final_data <- do.call(rbind, data_list)
-    
-    
-    rhessys_command(rhessys_version = rhv,
-                    world_file = world_fam,
-                    world_hdr_file = hdr,
-                    tec_file = "../tecfiles/tec.coast",
-                    flow_file = "../flowtables/test_msr.flow",
-                    start_date = str,
-                    end_date = end,
-                    output_file = outdir,
-                    input_parameters = "-s 0.0363 359.486 -sv 0.0363 359.486 -gw 0.346 0.416",
-                    command_options = cmd) 
     
     # save basin output 
-    output <- read.csv("../out/wb_bas.csv")
-    tmp = mkdate(output) %>% 
-      mutate(canopy_snow_stored = snow_stored,                                           canopy_rain_stored = rain_stored, 
-             run = bb,
-             msr = msr_flag) %>%
-      watbal_basin_of()
-    
-    if(bb==1){
-      write.table(as.data.frame(tmp), file=paste(outdir, "param_u_bas.csv", sep=""), append=F, row.names = FALSE)
-    }else{
-      write.table(as.data.frame(tmp), file=paste(outdir, "param_u_bas.csv", sep=""), append=T, col.names = FALSE, row.names = FALSE)
-    }
+    # output <- read.csv("../out/wb_bas.csv")
+    # tmp = mkdate(output) %>% 
+    #   mutate(canopy_snow_stored = snow_stored,                                           canopy_rain_stored = rain_stored, 
+    #          run = bb,
+    #          msr = msr_flag) %>%
+    #   watbal_basin_of()
+    # 
+    # if(bb==1){
+    #   write.table(as.data.frame(tmp), file=paste(outdir, "param_u_bas.csv", sep=""), append=F, row.names = FALSE)
+    # }else{
+    #   write.table(as.data.frame(tmp), file=paste(outdir, "param_u_bas.csv", sep=""), append=T, col.names = FALSE, row.names = FALSE)
+    # }
     
     # save stratum output 
     output2 <- read.csv("../out/wb_strat.csv")
+    
+    # fix df 
     tmp = mkdate(output2) %>% 
+      dplyr::filter(veg_parm_ID==3) %>% 
+      mutate(id = factor(patchID,levels=c(60853701, 60853702), labels = c("shade","sun"))) %>% 
+      dplyr::filter(year==1998) # this was a wet year towards end of run
+    
+    vars = tmp %>% group_by(id) %>% 
+      summarise(lai = mean(epv.proj_lai),
+                height = mean(epv.height),
+                rootdepth = mean(rootzone.depth),
+                gpp = sum(cdf.psn_to_cpool),
+                npp = sum(npp),
+                trans_ann = sum(trans),
+                trans_day_max = max(trans),
+                psi_ravg = mean(epv.psi_ravg))
+    
+    t_vars = tmp %>% 
+      dplyr::filter(id=="sun") %>% 
+      select(gpp = cdf.psn_to_cpool, month, id) %>% 
+      dplyr::filter(gpp == max(gpp)) 
+    
+    # remove duplicates 
+    t_vars = t_vars[!duplicated(t_vars$gpp),]
+    
+    t_vars_df = t_vars %>% 
+      inner_join(vars, by="id") %>% 
       mutate(run = bb,
              msr = msr_flag)
     
-    if(bb==1){
-      write.table(as.data.frame(tmp), file=paste(outdir, "param_u_strat.csv", sep=""), append=F, row.names = FALSE)
-    }else{
-      write.table(as.data.frame(tmp), file=paste(outdir, "param_u_strat.csv", sep=""), append=T, col.names = FALSE, row.names = FALSE)}
-    
-    # save patch output 
-    output3 <- read.csv("../out/wb_p.csv")
-    tmp = mkdate(output3) %>% 
-      mutate(run = bb,
-             msr = msr_flag)
+    # save to output 
     
     if(bb==1){
-      write.table(as.data.frame(tmp), file=paste(outdir, "param_u_p.csv", sep=""), append=F, row.names = FALSE)
+      write.table(as.data.frame(t_vars_df), file=paste(outdir, "param_u_strat.csv", sep=""), append=F, row.names = FALSE)
     }else{
-      write.table(as.data.frame(tmp), file=paste(outdir, "param_u_p.csv", sep=""), append=T, col.names = FALSE, row.names = FALSE)}
-  
+      write.table(as.data.frame(t_vars_df), file=paste(outdir, "param_u_strat.csv", sep=""), append=T, col.names = FALSE, row.names = FALSE)
+    }
+    
+    if(bb==1){
+      write.table(as.data.frame(tmp), file=paste(outdir, "param_u_strat_year.csv", sep=""), append=F, row.names = FALSE)
+    }else{
+      write.table(as.data.frame(tmp), file=paste(outdir, "param_u_strat_year.csv", sep=""), append=T, col.names = FALSE, row.names = FALSE)
+    }
+    
+  }
+)
 
-}
-
-
+## had an issue at the end so it stopped at 907
+check = read.csv("../out/test_tgrass50/c3/param_u_strat.csv", sep="")
+summary(check)
+check$group_id = check$run

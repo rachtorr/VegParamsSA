@@ -14,6 +14,6 @@
 ../defs/turfgrass-C3/turfgrass-C3_.def
 ../defs/non_veg.def
 ../defs/veg_liveoak/veg_liveoak_.def
-1
+2
 ../clim/mission_base
-
+../clim/patch_base
