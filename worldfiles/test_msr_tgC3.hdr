@@ -5,7 +5,7 @@
 1
 ../defs/stdzone.def
 2
-../defs/shallow/shallow_.def
+../defs/shallow.def
 ../defs/soil_pavement.def
 2
 ../defs/lu_undev.def

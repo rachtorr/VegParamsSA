@@ -8,11 +8,11 @@
 # -- test_msr_no_irr_2stratum.VegOnly.world
 # -- clim file: mission_base / patch_base for irrigation 
 
-setwd("~/Desktop/VegParamsSA/scripts/")
+setwd("~/Documents/VegParamsSA/scripts/")
 library(RHESSysIOinR)
 library(tidyverse)
 library(sensitivity)
-library(randtoolbox)
+library(randtoolbox
 library(zoo)
 library(patchwork)
 
@@ -21,13 +21,13 @@ library(patchwork)
 
 # load in turfgrass params 
 # set up new SA with parameter constraints 
+# set up new SA with parameter constraints 
 parms0 <- list(
   epc.height_to_stem_coef = c(0.2, 1.1), 
   epc.proj_sla = c(18, 27), # bijoor et al 2014 
   epc.max_root_depth = c(0.21, 0.5),
   epc.waring_pa = c(0.4, 1),
   epc.gl_smax = c(0.004, 0.012), # reyes et al. 2017
-  epc.day_leafon = c(270, 300),
   epc.ndays_expand =  c(16, 30),
   epc.ndays_litfall =  c(16, 40),
   epc.alloc_prop_day_growth = c(0.5, 0.75),
@@ -147,11 +147,11 @@ system.time(
       write.table(as.data.frame(t_vars_df), file=paste(outdir, "param_u_strat.csv", sep=""), append=T, col.names = FALSE, row.names = FALSE)
     }
     
-    if(bb==1){
-      write.table(as.data.frame(tmp), file=paste(outdir, "param_u_strat_year.csv", sep=""), append=F, row.names = FALSE)
-    }else{
-      write.table(as.data.frame(tmp), file=paste(outdir, "param_u_strat_year.csv", sep=""), append=T, col.names = FALSE, row.names = FALSE)
-    }
+    # if(bb==1){
+    #   write.table(as.data.frame(tmp), file=paste(outdir, "param_u_strat_year.csv", sep=""), append=F, row.names = FALSE)
+    # }else{
+    #   write.table(as.data.frame(tmp), file=paste(outdir, "param_u_strat_year.csv", sep=""), append=T, col.names = FALSE, row.names = FALSE)
+    # }
     
   }
 )

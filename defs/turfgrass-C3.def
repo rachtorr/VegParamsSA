@@ -39,8 +39,8 @@ EVERGREEN       epc.phenology.type
 300      epc.day_leafoff
 24.828125       epc.ndays_expand
 45.40234375       epc.ndays_litfall
-50.000000       epc.leaf_cn
-52.000000       epc.leaflitr_cn
+45.000000       epc.leaf_cn
+55.000000       epc.leaflitr_cn
 0.000000       min_heat_capacity
 0.000000       max_heat_capacity
 combined       epc.allocation_flag
@@ -61,7 +61,7 @@ combined       epc.allocation_flag
 0.0       epc.alloc_stemc_leafc
 0.0       epc.alloc_livewoodc_woodc
 0.050000       epc.maxlgf
-0.6474609375       epc.alloc_prop_day_growth
+0.65       epc.alloc_prop_day_growth
 0.000000       epc.daily_fire_turnover
 1       epc.height_to_stem_exp
 1.14140625       epc.height_to_stem_coef
@@ -103,7 +103,7 @@ combined       epc.allocation_flag
 0.200000       epc.max_storage_percent
 1.000000       epc.min_percent_leafg
 0.250000       epc.dickenson_pa
-0.41171875       epc.waring_pa
+0.8      epc.waring_pa
 2.5       epc.waring_pb
 0       epc.Tacclim
 3.220000       epc.Tacclim_intercpt
