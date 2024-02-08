@@ -1,0 +1,36 @@
+filter:
+	timestep: daily
+	output:
+		format: csv
+		path: "../out"
+		filename: "SA_bas"
+	basin:
+		ids: 608537
+		variables: 
+		patch.evaporation,
+		patch.evaporation_surf,
+    patch.rootzone.depth
+
+filter:
+	timestep: daily
+	output:
+		format: csv
+		path: "../out"
+		filename: "SA_strat"
+	stratum:
+		ids: 608537
+		variables: 
+		epv.proj_lai,
+		epv.height,
+    rootzone.depth,
+    cover_fraction, 
+    cs.leafc,
+		cs.live_crootc,
+    cs.dead_crootc,
+		cs.frootc,
+		cs.dead_leafc,
+		cs.leafc_store,
+    cs.live_stemc, 
+    cs.dead_stemc,
+    cs.totalc
+
