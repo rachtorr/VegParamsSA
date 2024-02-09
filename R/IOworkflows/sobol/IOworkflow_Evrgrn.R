@@ -2,49 +2,51 @@
 library(RHESSysIOinR)
 library(tidyverse)
 library(sensitivity)
-source("~/RHESSysIOinR-master/R/select_output_variables_R.R")
+#source("~/RHESSysIOinR-master/R/select_output_variables_R.R")
 #setwd("~/Google Drive File Stream/My Drive/patches/scripts")
-setwd("~/Documents/patches/scripts/")
+setwd("~/VegParamsSA/scripts/")
 
 ## parameter ranges and any settings as of March 14th 2021  
+
+## Updates for AGU revisions Jan. 28, 2024
+## sensitivity analysis with irrigation 
+## changing: clim file with irrigation (patch_base), using output filter (watbal_patch.yml to check water balance and of_sensitivity.yml for sobol)
+
+
 
 # 1: set up input files and command line options
 # RHESSys Inputs
 input_rhessys <- list()
-input_rhessys$rhessys_version <- "~/RHESSys-develop/bin/rhessys7.2"
-input_rhessys$tec_file <- "../tecfiles/tec.coast"
-input_rhessys$world_file <- "../worldfiles/OakPatch.world.0"
-input_rhessys$world_hdr_prefix <- "../worldfiles/OakPatch.hdr"
+input_rhessys$rhessys_version <- "~/RHESSys-lu/rhessys/rhessys7.4"
+input_rhessys$tec_file <- "../tecfiles/tec.spinup"
+input_rhessys$world_file <- "../worldfiles/Veg.world.0"
+input_rhessys$world_hdr_prefix <- "../worldfiles/OakPatch.hdr" # updated to patch_base
 input_rhessys$flow_file <- "../flowtables/OakPatch.flow"
-input_rhessys$start_date <- "1940 10 1 1"
+input_rhessys$start_date <- "1980 10 1 1"
 input_rhessys$end_date <- "2010 10 2 2"
-input_rhessys$output_folder <- "../out/RHESSysIOinR_output"
-input_rhessys$output_filename <- "conifer"
-input_rhessys$command_options <- c("-b -g -c -climrepeat -vmort_off")
+input_rhessys$output_folder <- "../out"
+input_rhessys$output_filename <- "oak"
+input_rhessys$command_options <- c("-g -climrepeat -vmort_off -of watbal_of_noSurfaceMSR.yml")
 
-# HDR (header) file
-input_hdr_list <- list()
-input_hdr_list$basin_def <- c("../defs/stdbasin.def")
-input_hdr_list$hillslope_def <- c("../defs/stdhillslope.def")
-input_hdr_list$zone_def <- c("../defs/stdzone.def")
-input_hdr_list$soil_def <- c("../defs/shallow_NT.def")
+input_hdr_list = list()
+input_hdr_list$soil_def <- c("../defs/shallow.def")
 input_hdr_list$landuse_def <- c("../defs/lu_undev.def")
 input_hdr_list$stratum_def <- c("../defs/veg_liveoak.def")
-input_hdr_list$base_stations <- c("../clim/mission_base_vpd")
+
 
 # sample input def list - can change parameters
 # [1] on stratum_def corresponds to veg file listed above
 # parameter method LHC - c(low, high, n=number of runs)
-n = 125
-#nsp = 1250
+n = 100
+#nsp = 12
 input_def_list <- list()
 input_def_list <- list(
-  list(input_hdr_list$soil_def[1], "pore_size_index", c(0.5,0.7, n)),
-  list(input_hdr_list$soil_def[1], "psi_air_entry", c(0.36, 3, n)),
+  list(input_hdr_list$soil_def[1], "pore_size_index", c(0.15,0.25, n)),
+  list(input_hdr_list$soil_def[1], "psi_air_entry", c(0.17, 0.26, n)),
   list(input_hdr_list$stratum_def[1], "epc.leaf_cn", c(33, 67, n)),
   list(input_hdr_list$stratum_def[1], "epc.branch_turnover", c(0.01, 0.034, n)),
   list(input_hdr_list$stratum_def[1], "epc.gl_smax", c(0.0028, 0.00312, n)),
-  list(input_hdr_list$stratum_def[1], "epc.flnr_age_mult", c(1.001, 1.998, n)),
+  list(input_hdr_list$stratum_def[1], "epc.flnr_age_mult", c(0.035, 0.053, n)),
   list(input_hdr_list$stratum_def[1], "epc.litter_moist_coef", c(0.00015, 0.0005995, n)),
   list(input_hdr_list$stratum_def[1], "epc.psi_close", c(-9, -3, n)),
   list(input_hdr_list$stratum_def[1], "mrc.q10", c(1.8, 2.4, n)),
@@ -54,62 +56,27 @@ input_def_list <- list(
   list(input_hdr_list$stratum_def[1], "epc.storage_transfer_prop", c(0.39, 0.6, n)),
   list(input_hdr_list$stratum_def[1], "epc.height_to_stem_coef", c(0.25, 0.75, n)),
   list(input_hdr_list$stratum_def[1], "epc.waring_pa", c(0.24, 0.38, n)),
-  list(input_hdr_list$stratum_def[1], "epc.root_distrib_parm", c(5, 7.5, n)),
+  list(input_hdr_list$stratum_def[1], "epc.root_distrib_parm", c(2, 8, n)),
   list(input_hdr_list$stratum_def[1], "epc.proj_sla", c(14, 25, n)),
   list(input_hdr_list$stratum_def[1], "epc.alloc_stemc_leafc", c(1.3, 1.8, n)),
-  list(input_hdr_list$stratum_def[1], "epc.ext_coef", c(0.650025, 0.749975, n)),
+  list(input_hdr_list$stratum_def[1], "epc.ext_coef", c(0.65, 0.75, n)),
   list(input_hdr_list$stratum_def[1], "specific_rain_capacity", c(0.000100025, 0.000199975, n)),
-  list(input_hdr_list$stratum_def[1], "epc.flnr_sunlit", c(0.15, 0.538, n)),
-  list(input_hdr_list$stratum_def[1], "epc.flnr_shade", c(0.093, 0.3967, n)),
-  list(input_hdr_list$stratum_def[1], "epc.netpabs_sunlit", c(0.15, 0.3, n)),
-  list(input_hdr_list$stratum_def[1], "epc.netpabs_shade", c(0.1, 0.4, n)),
-  list(input_hdr_list$stratum_def[1], "epc.netpabs_age_mult", c(1.012, 1.99, n)),
-  list(input_hdr_list$stratum_def[1], "epc.cpool_mort_fract", c(0.0005, 0.1, n)),
-  list(input_hdr_list$stratum_def[1], "epc.min_percent_leafg", c(0.002, 0.008, n)),
-  list(input_hdr_list$stratum_def[1], "epc.livewood_turnover", c(0.02, 0.1, n)),
-  list(input_hdr_list$stratum_def[1], "epc.waring_pb", c(0.55, 1.0, n)),
+  list(input_hdr_list$stratum_def[1], "epc.netpabs_age_mult", c(0.232, 0.348, n)),
+  list(input_hdr_list$stratum_def[1], "epc.cpool_mort_fract", c(0.0001, 0.1, n)),
+  list(input_hdr_list$stratum_def[1], "epc.min_percent_leafg", c(0.0005, 0.01, n)),
+  list(input_hdr_list$stratum_def[1], "epc.livewood_turnover", c(0.56, 0.84, n)),
+  list(input_hdr_list$stratum_def[1], "epc.waring_pb", c(0.05, 1.0, n)),
   list(input_hdr_list$stratum_def[1], "epc.max_storage_percent", c(0.2, 0.4, n)),
-  list(input_hdr_list$stratum_def[1], "epc.min_leaf_carbon", c(0.00102, 0.0125, n)),
-  list(input_hdr_list$stratum_def[1], "epc.resprout_leaf_carbon", c(0.005, 0.01, n)),
-  list(input_hdr_list$stratum_def[1], "epc.alloc_frootc_leafc", c(0.63, 1.2, n)),
-  list(input_hdr_list$stratum_def[1], "epc.frootc_crootc", c(0.501, 1.5, n)),
-  list(input_hdr_list$stratum_def[1], "epc.alloc_prop_day_growth", c(0.44, 0.69, n)),
+  list(input_hdr_list$stratum_def[1], "epc.min_leaf_carbon", c(0.001, 0.02, n)),
+  list(input_hdr_list$stratum_def[1], "epc.resprout_leaf_carbon", c(0.0005, 0.01, n)),
+  list(input_hdr_list$stratum_def[1], "epc.alloc_frootc_leafc", c(0.2, 1.5, n)),
+  list(input_hdr_list$stratum_def[1], "epc.frootc_crootc", c(0.53, 0.78, n)),
+  list(input_hdr_list$stratum_def[1], "epc.alloc_prop_day_growth", c(0.4, 0.6, n)),
   list(input_hdr_list$stratum_def[1], "epc.day_leafon", c(274, 305, n)),
   list(input_hdr_list$stratum_def[1], "epc.day_leafoff", c(60, 90, n)),
   list(input_hdr_list$stratum_def[1], "epc.ndays_expand", c(45, 57, n)),
   list(input_hdr_list$stratum_def[1], "epc.ndays_litfall", c(43, 60, n))
 )
-
-
-# select which variables to look at from output
-output_variables <- data.frame(out_file=character(), variable=character(), stringsAsFactors=FALSE)
-output_variables[1,] <- data.frame("bd", "lai", stringsAsFactors=FALSE)
-output_variables[2,] <- data.frame("bd", "height", stringsAsFactors = FALSE)
-output_variables[3,] <- data.frame("bd", "plantc", stringsAsFactors = FALSE)
-
-output_variables[4,] <- data.frame("bd", "rootdepth", stringsAsFactors = FALSE)
-output_variables[5,] <- data.frame("cdg", "cpool", stringsAsFactors=FALSE)
-output_variables[6,] <- data.frame("cdg", "live_stemc", stringsAsFactors=FALSE)
-output_variables[7,] <- data.frame("cdg", "live_crootc", stringsAsFactors=FALSE)
-output_variables[8,] <- data.frame("cdg", "dead_stemc", stringsAsFactors = FALSE)
-output_variables[9,] <- data.frame("cdg", "dead_crootc", stringsAsFactors=FALSE)
-output_variables[10,] <- data.frame("cdg", "dead_leafc", stringsAsFactors = FALSE)
-output_variables[11,] <- data.frame("cdg", "leafc_store", stringsAsFactors=FALSE)
-
-
-#########################################################################
-# make tec file - neeed to add part from generate_input_files
-#########################################################################
-## ***Stop - only do this if needed***
-#input_tec_data <- NULL
-input_tec_data <- data.frame(year=integer(),month=integer(),day=integer(),hour=integer(),name=character(),stringsAsFactors=FALSE)
-input_tec_data[1,] <- data.frame(1957, 10, 1, 1, "print_daily_on", stringsAsFactors=FALSE)
-input_tec_data[2,] <- data.frame(1957, 10, 1, 2, "print_daily_growth_on", stringsAsFactors=FALSE)
-
-if (is.null(input_tec_data) == FALSE){
-  make_tec_file(tec_file = input_rhessys$tec_file, tec_data = input_tec_data)
-  print(paste("Tec file has been written"))
-}
 
 
 #########################################################################
@@ -118,9 +85,10 @@ if (is.null(input_tec_data) == FALSE){
 
 if (is.null(input_def_list[1]) == FALSE){
 
+  # select method of parameter randomisation 
   method = "monte_carlo"
-  parameter_method = match.arg(c("all_combinations", "lhc", "monte_carlo", "exact_values"), arg=method)
-
+  
+  # set up def parameters as list 
   input_def_file <- unlist(lapply(input_def_list, function(x) x[1]))
   input_def_file_unique <- unique(input_def_file)
 
@@ -137,12 +105,12 @@ if (is.null(input_def_list[1]) == FALSE){
     names(input_def_list_by_unique_file[[bb]]) <- lapply(input_def_list_by_unique_file[[bb]], function(x) x[[2]])
     input_def_change_par <- sapply(input_def_list_by_unique_file[[bb]], function(x) x[[3]], simplify = FALSE, USE.NAMES = TRUE) # Isolate parameter values
     
-    option_sets_def_par1[[bb]] <- make_option_set_combinations(input_list=input_def_change_par, parameter_method=parameter_method)
+    option_sets_def_par1[[bb]] <- make_option_set_combinations(input_list=input_def_change_par, parameter_method=method)
     # Attach group ID to option_sets_def_par
     tmp <- seq_along(option_sets_def_par1[[bb]][[1]])
     option_sets_def_par1[[bb]] <- bind_cols(option_sets_def_par1[[bb]], group_id = tmp)
     
-    option_sets_def_par2[[bb]] <- make_option_set_combinations(input_list=input_def_change_par, parameter_method=parameter_method)
+    option_sets_def_par2[[bb]] <- make_option_set_combinations(input_list=input_def_change_par, parameter_method=method)
     # Attach group ID to option_sets_def_par
     tmp <- seq_along(option_sets_def_par2[[bb]][[1]])
     option_sets_def_par2[[bb]] <- bind_cols(option_sets_def_par2[[bb]], group_id = tmp)
@@ -157,8 +125,8 @@ if (is.null(input_def_list[1]) == FALSE){
     # Attach group ID to option_sets_def_par
     tmp <- seq_along(1:nrow(run_sob$X))
     sobol_tmp <- cbind(run_sob$X, group_id=tmp)
-    option_sets_def_par <- list(sobol_tmp[,c(1:2,40)], 
-                                sobol_tmp[,3:40])
+    option_sets_def_par <- list(sobol_tmp[,c(1:2,36)], 
+                                sobol_tmp[,3:36])
 
     names(option_sets_def_par) <- input_def_file_unique
 }
@@ -169,7 +137,7 @@ if (is.null(input_def_list[1]) == FALSE){
 option_sets_dated_seq <- data.frame(dated_id = 0)
 
 # option sets all combines veg params with rhessys command line input
-option_sets_all <- make_all_option_table(parameter_method,
+option_sets_all <- make_all_option_table(method,
                                          input_rhessys,
                                          input_hdr_list,
                                          option_sets_def_par,
@@ -181,7 +149,7 @@ nrow(option_sets_all)
 # command line parameters
 # values from script, calibrated by Janet or Erin or someone for Rattlesnake / Mission creek
 n = nrow(option_sets_def_par[[1]])
-  input_standard_par_list <- list(
+input_standard_par_list <- list(
     m =  rep(0.036294,n),
     k = rep(359.4858, n),
     m_v = rep(0.036294,n),
@@ -202,9 +170,13 @@ n = nrow(option_sets_def_par[[1]])
 # start here to run
 if(nrow(option_sets_def_par[[1]])==nrow(option_sets_all)){
 
+  # Save the sobol object as an R file 
   saveRDS(run_sob, "../out/RHESSysIOinR_output/allsim/jansenoutput.rds")
-  write.csv(option_sets_all, file.path(input_rhessys$output_folder,"allsim", paste(input_rhessys$output_filename, "_all_options.csv", sep="")), row.names = FALSE, quote=FALSE)
+  
+  # save the inputs used in the runs 
+  write.csv(option_sets_all, "../out/rhessys_all_options.csv", sep="", row.names = FALSE, quote=FALSE)
 
+  # get number of runs 
   option_sets_rhessys_rows <- nrow(option_sets_all)
 
   system.time(
@@ -216,6 +188,7 @@ if(nrow(option_sets_def_par[[1]])==nrow(option_sets_all)){
       # Step through each unique parameter set and make def file
       for (bb in seq_along(option_sets_def_par[[1]]$group_id)){
 
+        # for each run change the parameters in the def file 
         for(aa in seq_along(option_sets_def_par)){
           change_def_file(def_file = names(option_sets_def_par)[aa],
                           par_sets = as_tibble(dplyr::select(option_sets_def_par[[aa]], -group_id))[bb,],
@@ -227,63 +200,80 @@ if(nrow(option_sets_def_par[[1]])==nrow(option_sets_all)){
         print(paste("----------------- Run", bb ,"of", option_sets_rhessys_rows, "-----------------"))
 
         # Call RHESSys for spinup
-        rhessys_command(rhessys_version = option_sets_all$rhessys_version[bb],
-                        world_file = option_sets_all$world_file[bb],
-                        world_hdr_file = "../worldfiles/OakPatch.spin.hdr",
+        rhessys_command(rhessys_version = input_rhessys$rhessys_version,
+                        world_file = input_rhessys$world_file,
+                        world_hdr_file = input_rhessys$world_hdr_prefix,
                         tec_file = "../tecfiles/tec.spinup",
-                        flow_file = option_sets_all$flow_file[bb],
-                        start_date = option_sets_all$start_date[bb],
-                        end_date = "2020 10 1 1",
-                        output_file = paste(option_sets_all$output_folder[bb],"/", option_sets_all$output_filename[bb], sep=""),
+                        flow_file = input_rhessys$flow_file,
+                        start_date = "1980 10 1 1",
+                        end_date = "2010 10 1 1",
+                        output_file = "test",
                         input_parameters = "-s 0.036294 359.485800 -sv 0.036294 359.485800 -gw 0.346205 0.416299",
-                        command_options = "-b -g -c -climrepeat -vmort_off")
+                        command_options = input_rhessys$command_options)
 
-         cmd = sprintf("mv ../worldfiles/OakPatch.world.0.Y2010M9D30H1.state ../worldfiles/OakWorld.spun70")
+         # move spinup file 
+        cmd = sprintf("mv ../worldfiles/Veg.world.0.Y2010M9D30H1.state ../worldfiles/OakWorld.spun70")
        system(cmd)
       # 
        print(paste("Spin up complete"))
 
-      # for run with output
-       rhessys_command(rhessys_version = option_sets_all$rhessys_version[bb],
+      # for run with output for study period 
+       rhessys_command(rhessys_version = input_rhessys$rhessys_version,
                        world_file = "../worldfiles/OakWorld.spun70",
-                       world_hdr_file = "../worldfiles/OakPatch.hdr",
+                       world_hdr_file = input_rhessys$world_hdr_prefix,
                        tec_file = "../tecfiles/tec.coast",
-                       flow_file = option_sets_all$flow_file[bb],
+                       flow_file = input_rhessys$flow_file,
                        start_date = "2010 10 1 1",
                        end_date = "2020 10 1 1",
-                       output_file = paste(option_sets_all$output_folder[bb],"/", option_sets_all$output_filename[bb], sep=""),
+                       output_file = ,
                        input_parameters = "-s 0.036294 359.485800 -sv 0.036294 359.485800 -gw 0.346205 0.416299",
-                       command_options = "-b -g -c -climrepeat -vmort_off")
+                       command_options = "-g -climrepeat -vmort_off -of of_sensitivity.yml")
 
 
         # Process RHESSys output
-          if (is.null(output_variables[1]) == F){
-            select_output_variables_R(output_variables = output_variables,
-                                      output_folder =  input_rhessys$output_folder,
-                                      output_filename = input_rhessys$output_filename,
-                                      run = bb,
-                                      max_run = option_sets_rhessys_rows
-            )
-          }
+          read = read.csv("../out/SA_strat.csv") 
+          
+          # summarise by year to get 2011 value 
+          out_yr = read %>% group_by(year) %>%
+            summarize_at(vars(epv.proj_lai, cs.totalc, epv.height), 
+                         list(mean)) %>% 
+            mutate(run = bb) %>% 
+            filter(year==2011 | year ==2014 | year==2017)
+          
+          # summarise by the month with the highest LAI, on average 
+          out_mo = read %>% 
+            group_by(year, month) %>% 
+            summarize(lai=max(epv.proj_lai)) %>% 
+            group_by(month) %>% 
+            summarize(lai = mean(lai)) %>% 
+            dplyr::filter(lai==max(lai)) %>% 
+            mutate(run=bb)
+          
+          # save to data frame with runs as a column 
+          if(bb==1){
+            write.table(as.data.frame(out_yr), 
+                        file=paste(input_rhessys$output_folder, "SA_ann.csv", sep="/"), 
+                        append=F, row.names = FALSE, quote=FALSE, col.names=TRUE)
+            write.table(as.data.frame(out_mo), 
+                        file=paste(input_rhessys$output_folder, "SA_month.csv", sep="/"), 
+                        append=F, row.names = FALSE, quote=FALSE, col.names=TRUE)
+          }else{
+            write.table(as.data.frame(out_yr), 
+                        file=paste(input_rhessys$output_folder, "SA_ann.csv", sep="/"), append=T, col.names = FALSE, row.names = FALSE)
+            write.table(as.data.frame(out_mo), 
+                        file=paste(input_rhessys$output_folder, "SA_month.csv", sep="/"), append=T, col.names = FALSE, row.names = FALSE)
+            
+            
+            }
+         }
+        )
       }
-   # }
-  )
-}
+  
+
      
   
   
   
-
-test <- readin_rhessys_output("../out/RHESSysIOinR_output/evergreen")
-
-ggplot(test$bd) + 
-  geom_line(aes(x=date, y=plantc)) + 
-  geom_line(data=test$cdg, aes(x=date, y=leafc/1000, col='leaf')) + 
-  geom_line(data=test$cdg, aes(x=date, y=dead_stemc/1000, col='stem')) + 
-  geom_line(data=test$cdg, aes(x=date, y=dead_crootc/1000, col='root')) + 
-  geom_line(data=test$cdg, aes(x=date, y=live_stemc/1000, col='livestem')) + 
-  geom_line(data=test$cdg, aes(x=date, y=live_crootc/1000, col='livecroot')) + 
-  geom_line(data=test$cdg, aes(x=date, y=live_stemc/1000+dead_stemc/1000+leafc/1000+dead_crootc/1000+live_crootc/1000+cpool/1000+frootc/1000+dead_leafc/1000+leafc_store/1000+cwdc/1000, col='check'))
 
 
 
