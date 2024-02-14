@@ -15,9 +15,9 @@ vars = c("lai",
 
 
 # load in rs data
-vis <- read.csv("/Volumes/GoogleDrive/My Drive/plant_params/DM_data/tree_and_turfgrass_monroe2_selected_weightedmeanVIs.csv")
+vis <- read.csv("../data/tree_and_turfgrass_monroe2_selected_weightedmeanVIs.csv")
 
-data <- read.csv("~/Google Drive/My Drive/patches/R/data/weighted_tree_summary.csv")
+lai_data <- read.csv("../data/weighted_tree_summary.csv")
 
 
 
@@ -52,16 +52,16 @@ do.call("grid.arrange", c(plra$plots, ncol=2))
 plra$count
 
 ############## - quag - ############################
-params_ev <- read.csv("../out/ch1/evergreen/allsim/quag_all_options.csv")
+params_ev <- read.csv("../out/rhessys_all_options.csv")
 params_ev$run <- params_ev$...defs.shallow.def.group_id
-dir= "../out/ch1/evergreen/allsim/"
+dir= "../out/"
 tree=list(81, "QUAG")
-quag <- get_filtered_params(dir=dir, vars=vars, params=params_ev, 
-                            ndvi=vis, lai_data=data, spcode=tree, 
+quag <- get_filtered_params(dir=dir, dfann="SA_ann.csv", dfmonth = "SA_month.csv", 
+                            ndvi=vis, lai_data=lai_data, spcode=tree, 
                             ht=25,
                             month_range=c(4, 12),
                             plot=T,
-                            write=T,
+                            write=F,
                             carbon_filt=F)
 do.call("grid.arrange", c(quag$plots, ncol=2))
 quag$count

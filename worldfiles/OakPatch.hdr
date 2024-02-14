@@ -10,6 +10,6 @@
 ../defs/lu_undev.def
 1
 ../defs/veg_liveoak/veg_liveoak_.def
-1
+2
 ../clim/mission_base
-
+../clim/patch_base

@@ -17,7 +17,7 @@ setwd("~/VegParamsSA/scripts/")
 # 1: set up input files and command line options
 # RHESSys Inputs
 input_rhessys <- list()
-input_rhessys$rhessys_version <- "~/RHESSys-lu/rhessys/rhessys7.4"
+input_rhessys$rhessys_version <- "~/RHESSys-rt/rhessys/rhessys7.3"
 input_rhessys$tec_file <- "../tecfiles/tec.spinup"
 input_rhessys$world_file <- "../worldfiles/Veg.world.0"
 input_rhessys$world_hdr_prefix <- "../worldfiles/OakPatch.hdr" # updated to patch_base
@@ -37,11 +37,11 @@ input_hdr_list$stratum_def <- c("../defs/veg_liveoak.def")
 # sample input def list - can change parameters
 # [1] on stratum_def corresponds to veg file listed above
 # parameter method LHC - c(low, high, n=number of runs)
-n = 100
+n = 15
 #nsp = 12
 input_def_list <- list()
 input_def_list <- list(
-  list(input_hdr_list$soil_def[1], "pore_size_index", c(0.15,0.25, n)),
+  list(input_hdr_list$soil_def[1], "pore_size_index", c(0.1,0.2, n)),
   list(input_hdr_list$soil_def[1], "psi_air_entry", c(0.17, 0.26, n)),
   list(input_hdr_list$stratum_def[1], "epc.leaf_cn", c(33, 67, n)),
   list(input_hdr_list$stratum_def[1], "epc.branch_turnover", c(0.01, 0.034, n)),
@@ -51,7 +51,7 @@ input_def_list <- list(
   list(input_hdr_list$stratum_def[1], "epc.psi_close", c(-9, -3, n)),
   list(input_hdr_list$stratum_def[1], "mrc.q10", c(1.8, 2.4, n)),
   list(input_hdr_list$stratum_def[1], "epc.vpd_close", c(2600, 6400, n)),
-  list(input_hdr_list$stratum_def[1], "epc.leaf_turnover", c(0.10, 0.26, n)),
+  list(input_hdr_list$stratum_def[1], "epc.leaf_turnover", c(0.2, 1.2, n)),
   list(input_hdr_list$stratum_def[1], "epc.froot_turnover", c(0.3, 0.55, n)),
   list(input_hdr_list$stratum_def[1], "epc.storage_transfer_prop", c(0.39, 0.6, n)),
   list(input_hdr_list$stratum_def[1], "epc.height_to_stem_coef", c(0.25, 0.75, n)),
@@ -171,7 +171,7 @@ input_standard_par_list <- list(
 if(nrow(option_sets_def_par[[1]])==nrow(option_sets_all)){
 
   # Save the sobol object as an R file 
-  saveRDS(run_sob, "../out/RHESSysIOinR_output/allsim/jansenoutput.rds")
+  saveRDS(run_sob, "../out/2024jansenoutput.rds")
   
   # save the inputs used in the runs 
   write.csv(option_sets_all, "../out/rhessys_all_options.csv", sep="", row.names = FALSE, quote=FALSE)
@@ -225,7 +225,7 @@ if(nrow(option_sets_def_par[[1]])==nrow(option_sets_all)){
                        flow_file = input_rhessys$flow_file,
                        start_date = "2010 10 1 1",
                        end_date = "2020 10 1 1",
-                       output_file = ,
+                       output_file = "tmp",
                        input_parameters = "-s 0.036294 359.485800 -sv 0.036294 359.485800 -gw 0.346205 0.416299",
                        command_options = "-g -climrepeat -vmort_off -of of_sensitivity.yml")
 
